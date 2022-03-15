@@ -20,12 +20,12 @@ or by downloading and unzipping it in `LOCAL_REPOSITORY_PATH`. Then:
 
 ### Anaconda + Jupyter Notebooks Setup
 - Download and install Anaconda from [official website](https://www.anaconda.com/products/individual#Downloads). 
-- Verify instllation by starting the Anaconda Prompt. A terminal should start with the text `(base)` written at the beginning of the line.
+- Verify installation by starting the Anaconda Prompt. A terminal should start with the text `(base)` written at the beginning of the line.
 - Set the IML conda environment. Start the Anaconda Prompt and write:
   ```
   conda env create -f "LOCAL_REPOSITORY_PATH\environment.yml"
   ```
-  This will create a conda envoronment named `iml.env` with the specifications defined in `environment.yml`. If creating failed due to `ResolvePackageNotFound: plotly-orca` remove this line from environment file, create environment without, and then after activating environment run:
+  This will create a conda environment named `iml.env` with the specifications defined in `environment.yml`. If creating failed due to `ResolvePackageNotFound: plotly-orca` remove this line from environment file, create environment without, and then after activating environment run:
   ```
   conda install -c plotly plotly-orca
   ```
@@ -42,4 +42,4 @@ Another option is to run the Jupyter notebooks through the PyCharm IDE plug-in.
 - Open a PyCharm project from `LOCAL_REPOSITORY` and set the project's interpreter to be the `iml.env` environment.
 
 ### Using Google Colab
-One can also view and run the labs and code examples via Google Colab. It supports loading and running Jupyter notebooks and running using a specified Conda environemnt.
+One can also view and run the labs and code examples via Google Colab. It supports loading and running Jupyter notebooks and running using a specified Conda environment.
