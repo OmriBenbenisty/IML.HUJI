@@ -39,8 +39,8 @@ def test_univariate_gaussian():
     # Question 3 - Plotting Empirical PDF of fitted model
     uge.fit(X)
     go.Figure([go.Scatter(x=X, y=uge.pdf(X), mode='markers', name=r'$pdf$')],
-              layout=go.Layout(title=r"$\text{Random Normal Samples PDF Values Scatter}$",
-                               xaxis_title=r"$\text{Random Normal(10,1) Samples}$",
+              layout=go.Layout(title=r"$\text{1000 Random Normal Samples PDF Values Scatter}$",
+                               xaxis_title=r"$\text{Sample Value}$",
                                yaxis_title=r"$PDF$")).show()
 
 
@@ -58,6 +58,21 @@ def test_multivariate_gaussian():
     print(f"{mge.mu_}\n{mge.cov_}")
 
     # Question 5 - Likelihood evaluation
+    space_size = 200
+    f1 = np.linspace(-13, 10, space_size)
+    f3 = np.linspace(-10, 10, space_size)
+    mus = np.array(np.meshgrid(f1, [0], f3, [0])).T.reshape(space_size, space_size, 4)
+    z = np.array([[mge.log_likelihood(mu, cov, X) for mu in mus[i]] for i in range(mus.shape[0])]).T
+    fig = go.Figure(data=go.Heatmap(x=f3, y=f1, z=z), layout=go.Layout(
+        title='Log-Likelihood of Multivariate Normal Distribution with True Expectation of 0, 0, 4, 0' +
+              '<br>' +
+              'as a Function of f1, 0, f3, 0',
+        xaxis_title=r"$\text{f3}$",
+        yaxis_title=r"$\text{f1}$"))
+    fig.show()
+
+    """
+        # Question 5 - Likelihood evaluation
     space_size = 200
     f1 = np.linspace(-13, 10, space_size)
     f3 = np.linspace(-10, 10, space_size)
@@ -88,15 +103,8 @@ def test_multivariate_gaussian():
     #           r"\r\text{            f1, 0, f3, 0}$",
     #     xaxis_title=r"$\text{Expectation Values}$",
     #     yaxis_title=r"$\text{Expectation Values}$"))
-    fig = go.Figure(data=go.Heatmap(x=f3, y=f1, z=z), layout=go.Layout(
-        title='Log-Likelihood of Multivariate Normal Distribution with true Expectation of 0, 0, 4, 0' +
-              '<br>' +
-              'and Log-Likelihood as a Function of f1, 0, f3, 0',
-        xaxis_title=r"$\text{f3}$",
-        yaxis_title=r"$\text{f1}$"))
-    fig.show()
-    # ,
-    #         zaxis_title=r"$\text{Log-Likelihood}$"
+    """
+
 
     # Question 6 - Maximum likelihood
 

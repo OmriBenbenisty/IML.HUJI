@@ -203,9 +203,4 @@ class MultivariateGaussian:
         log2pi = (K * n * np.log(2 * np.pi)) / 2
         logdet = (n * np.log(np.linalg.det(cov))) / 2
         sum_x = np.trace((X - mu) @ np.linalg.inv(cov) @ (X - mu).T)
-        # sum_x = (np.sum(np.array([np.transpose(X[i] - mu) @ np.linalg.inv(cov) @ (X[i] - mu) for i in range(n)]))) / 2
-        # print(sum_x)
         return -log2pi - logdet - sum_x
-        # return 1
-        # return (-(np.log(np.linalg.det(cov)) + (X - np.tile([mu], (X.shape[0], 1))).T * np.linalg.inv(cov) * (X - np.tile([mu], (X.shape[0], 1)))
-        #           + X.shape[0] * np.log(2 * np.pi)) / 2)
