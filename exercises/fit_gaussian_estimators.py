@@ -71,41 +71,6 @@ def test_multivariate_gaussian():
         yaxis_title=r"$\text{f1}$"))
     fig.show()
 
-    """
-        # Question 5 - Likelihood evaluation
-    space_size = 200
-    f1 = np.linspace(-13, 10, space_size)
-    f3 = np.linspace(-10, 10, space_size)
-    # mus = np.stack((f1, np.zeros(space_size), f3, np.zeros(space_size)), 1)
-    # mus = np.fromiter((np.ndarray([i, 0, j, 0]) for i in f1 for j in f3), dtype=np.float64)
-    # mus = np.zeros((space_size, space_size, 4))
-    # z = np.empty((space_size, space_size))
-    # for i, val1 in enumerate(f1):
-    #     for j, val2 in enumerate(f3):
-            # print(val1)
-            # mus[i, j] = np.array([val1, 0, val2, 0])
-            # m = np.array([val1, 0, val2, 0])
-            # z[i, j] = mge.log_likelihood(m, cov, X)
-            # print(mge.log_likelihood(m, cov, X))
-    mus = np.array(np.meshgrid(f1, [0], f3, [0])).T.reshape(space_size, space_size, 4)
-    z = np.array([[mge.log_likelihood(m, cov, X) for m in mus[i]] for i in range(mus.shape[0])]).T  # good
-    # z = np.fromfunction(lambda i, j: mge.log_likelihood(mus[i, j], cov, X), (space_size, space_size), dtype=int)
-    def calc(mu):
-        return mge.log_likelihood(mu, cov, X)
-    # z = [list(map(calc, mus[i])) for i in range(space_size)]
-    # z = np.fromfunction(lambda i, j: j, (space_size, space_size), dtype=int)
-    # z = np.fromfunction(lg_likelihood, (space_size, space_size))
-    # z = np.fromfunction(lambda i, j: print(type(i[0][0])), (space_size, 1))
-    # print(z)
-    # fig = go.Figure(data=go.Heatmap(x=f3, y=f1, z=z))
-    # fig = go.Figure(data=go.Heatmap(x=f3, y=f1, z=z), layout=go.Layout(
-    #     title=r"$\text{Log-Likelihood of Multivariate Normal Distribution with Expectation of 0, 0, 4, 0}"
-    #           r"\r\text{            f1, 0, f3, 0}$",
-    #     xaxis_title=r"$\text{Expectation Values}$",
-    #     yaxis_title=r"$\text{Expectation Values}$"))
-    """
-
-
     # Question 6 - Maximum likelihood
 
 
