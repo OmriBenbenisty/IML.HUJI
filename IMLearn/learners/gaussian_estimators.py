@@ -200,7 +200,10 @@ class MultivariateGaussian:
         """
         n = X.shape[0]
         K = X.shape[1]
-        log2pi = (K * n * np.log(2 * np.pi)) / 2
-        logdet = (n * np.log(np.linalg.det(cov))) / 2
-        sum_x = np.trace((X - mu) @ np.linalg.inv(cov) @ (X - mu).T)
-        return -log2pi - logdet - sum_x
+        log2pi = (K * n * np.log(2 * np.pi))
+        logdet = (n * np.log(np.linalg.det(cov)))
+        # sum_rows = np.sum(((X - mu) @ np.linalg.inv(cov)) * (X - mu), axis=1)
+        # sum_x = np.sum(sum_rows)
+        # equivalent - sum all matrix instead of row by row
+        sum_x = np.sum(((X - mu) @ np.linalg.inv(cov)) * (X - mu))
+        return -(log2pi + logdet + sum_x) / 2
