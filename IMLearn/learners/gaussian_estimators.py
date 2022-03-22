@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import numpy
 import numpy as np
-from numpy.linalg import inv, det, slogdet
-
 
 class UnivariateGaussian:
     """
@@ -101,8 +98,8 @@ class UnivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        return ((-(np.log(2 * np.pi) - np.log(sigma ** 2)) * X.size / 2) -
-                (np.sum((X - mu) ** 2) / (2 * sigma ** 2)))
+        return -(((np.log(2 * np.pi) + np.log(sigma ** 2)) * X.shape[0]) +
+                 (np.sum((X - mu) ** 2) / (sigma ** 2))) / 2
 
 
 class MultivariateGaussian:
@@ -150,7 +147,7 @@ class MultivariateGaussian:
         Then sets `self.fitted_` attribute to `True`
         """
         self.mu_ = X.mean(0)
-        self.cov_ = np.cov(X)
+        self.cov_ = np.cov(X.T)
         self.fitted_ = True
         return self
 
@@ -177,7 +174,7 @@ class MultivariateGaussian:
         if np.linalg.det(self.cov_) == 0:
             raise ValueError("Cov Det is 0 - Samples are too close")
         return (np.exp(-((X - self.mu_).T @ np.inv(self.cov_) @ (X - self.mu_)) / 2) /
-                np.sqrt(np.linalg.det(self.cov_) * (2 * np.pi) ** X.shape[0]))
+                np.sqrt(np.linalg.det(self.cov_) * ((2 * np.pi) ** X.shape[1])))
 
     @staticmethod
     def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:
