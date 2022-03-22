@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
+
 class UnivariateGaussian:
     """
     Class for univariate Gaussian Distribution Estimator
