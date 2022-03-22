@@ -61,11 +61,12 @@ def test_multivariate_gaussian():
     space_size = 200
     f1 = np.linspace(-10, 10, space_size)
     f3 = np.linspace(-10, 10, space_size)
-    mus = np.transpose(np.array(np.meshgrid(f1, [0], f3, [0])).T.reshape(space_size, space_size, 4), (1, 0, 2))
+    mus = np.array(np.meshgrid(f1, f3)).T.reshape(space_size, space_size, 2)
+
     # z = np.array([[mge.log_likelihood(mu, cov, X) for mu in mus[i]] for i in range(mus.shape[0])]).T
 
     def calc_mu(m):
-        return mge.log_likelihood(m, cov, X)
+        return mge.log_likelihood(np.array([m[0], 0, m[1], 0]), cov, X)
 
     z = np.array([list(map(calc_mu, mus[i])) for i in range(mus.shape[0])])
     fig = go.Figure(data=go.Heatmap(x=f3, y=f1, z=z),
@@ -84,8 +85,8 @@ def test_multivariate_gaussian():
     fig.show()
 
     # Question 6 - Maximum likelihood
-    row, col = np.where(z == np.amax(z))
-    print(mus[row, col])
+    coord = np.where(z == np.amax(z))
+    print(mus[coord])
 
 
 if __name__ == '__main__':
