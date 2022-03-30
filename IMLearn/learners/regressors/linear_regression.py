@@ -87,4 +87,5 @@ class LinearRegression(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        return np.square(self._predict(X) - y).mean()
+        return mean_square_error(self._predict(X), y)
+        # return np.square(self._predict(X) - y).mean()
