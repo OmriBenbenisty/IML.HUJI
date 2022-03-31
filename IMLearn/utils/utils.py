@@ -34,8 +34,6 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
 
     """
     data = pd.concat([X, y], axis=1)
-
-    # all = X.join(y)
     train_X_y = data.sample(frac=train_proportion)
     test_X_y = data.drop(train_X_y.index)
 

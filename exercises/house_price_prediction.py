@@ -52,6 +52,8 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     full_data = full_data[full_data["price"].notna()]
 
 
+
+
     # remove 0 or empty zipcode
     full_data = full_data[full_data["zipcode"].notna()]
     full_data = full_data[full_data["zipcode"] > 0]
@@ -109,13 +111,10 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     area_bins = pd.get_dummies(full_data["area_bin"])
 
     # add missing area bins
-    count = 0
-    for i in range(NUM_OF_AREA_BINS):
-        if f"area_bin_{i}" not in area_bins.head():
-            count += 1
-            area_bins[f"area_bin_{i}"] = 0
-    print(count)
-    area_bins = area_bins[[f"area_bin_{i}" for i in range(NUM_OF_AREA_BINS)]]  # sorted
+    # for i in range(NUM_OF_AREA_BINS):
+    #     if f"area_bin_{i}" not in area_bins.head():
+    #         area_bins[f"area_bin_{i}"] = 0
+    # area_bins = area_bins[[f"area_bin_{i}" for i in range(NUM_OF_AREA_BINS)]]  # sorted
     data = pd.concat([data, area_bins], axis=1)
 
     # convert zip to zip_code_bins
@@ -151,7 +150,12 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     output_path: str (default ".")
         Path to folder in which plots are saved
     """
-    raise NotImplementedError()
+    X_arr = X.to_numpy().T
+    y = y.to_numpy()
+    corr = np.array([np.corrcoef(X_arr[i], y)[0,1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
+    for i, c in enumerate(corr):
+        print((X.columns[i], c))
+
 
 
 if __name__ == '__main__':
@@ -184,11 +188,11 @@ if __name__ == '__main__':
     pd.DataFrame(res).to_csv("./temp_res.csv")
 
     # Question 2 - Feature evaluation with respect to response
-    # raise NotImplementedError()
-    X = np.arange(100).reshape(10, 10)
-    y = np.arange(10)
-    # reg.fit(X, y)
-    # reg.loss(X, y)
+    feature_evaluation(data, response)
+    # X = np.arange(100).reshape(10, 10)
+    # y = np.arange(10)
+    # # reg.fit(X, y)
+    # # reg.loss(X, y)
 
     # Question 3 - Split samples into training- and testing sets.
     # raise NotImplementedError()
