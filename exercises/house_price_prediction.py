@@ -1,5 +1,3 @@
-from sklearn.model_selection import train_test_split  # TODO delete
-
 from IMLearn.utils import split_train_test
 from IMLearn.learners.regressors import LinearRegression
 
@@ -17,10 +15,10 @@ KEEP = ["bedrooms", "bathrooms", "sqft_living", "sqft_lot",
         "floors", "waterfront", "view", "condition", "grade", "sqft_above",
         "sqft_basement", "yr_built", "sqft_living15", "sqft_lot15"]
 
-NUM_OF_BINS = 25  # should be a power of a number
+NUM_OF_AREA_BINS = 36  # should be a power of an int
 
 TOTAL_AVERAGE = 0
-AREA_BINS = np.zeros(NUM_OF_BINS)
+AREA_BINS = np.zeros(NUM_OF_AREA_BINS)
 
 """
 date -> year.month
@@ -48,20 +46,36 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     full_data = pd.read_csv(filename)
 
     # Remove prices under or equal to 0
-    full_data = full_data.drop(full_data[full_data.price <= 0].index)
+    full_data = full_data[full_data["price"] > 0]
+
+    # remove empty price
+    full_data = full_data[full_data["price"].notna()]
+
+
+    # remove 0 or empty zipcode
+    full_data = full_data[full_data["zipcode"].notna()]
+    full_data = full_data[full_data["zipcode"] > 0]
+
+    # remove sqft under 0
+    for col in full_data.head():
+        if ("sqft" in col):
+            full_data = full_data[full_data[str(col)] >= 0]
+
+
+
+    # remove empty date
+    full_data = full_data[full_data["date"].notna()]
+
 
     data = full_data.drop(DROP, axis=1)
 
-    # for col in data.head():
-    #     print(f"\"{col}\", ", end="")
-    # print()
 
-    # Convert date to year.month 201412 -> 2014.12  TODO handle empty cells
+    # Convert date to year.month 201412 -> 2014.12
     data["date"] = full_data["date"].apply(
         lambda x: pd.Timestamp(x).year + (pd.Timestamp(x).month / 10)
     )
-    #  replac missing with mean
-    data["date"].fillna(data["date"].mean(), inplace=True)
+    #  replace missing with mean
+    # data["date"].fillna(data["date"].mean(), inplace=True)
 
 
 
@@ -72,10 +86,10 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
 
     # create long lat to areas bins
 
-    longitude_bins = np.linspace(full_data["long"].min(), full_data["long"].max(), int(np.sqrt(NUM_OF_BINS)))
-    latitude_bins = np.linspace(full_data["lat"].min(), full_data["lat"].max(), int(np.sqrt(NUM_OF_BINS)))
-    area_grid = np.array(np.meshgrid(longitude_bins, latitude_bins)).T.reshape(int(np.sqrt(NUM_OF_BINS)),
-                                                                               int(np.sqrt(NUM_OF_BINS)), 2)
+    longitude_bins = np.linspace(full_data["long"].min(), full_data["long"].max(), int(np.sqrt(NUM_OF_AREA_BINS)))
+    latitude_bins = np.linspace(full_data["lat"].min(), full_data["lat"].max(), int(np.sqrt(NUM_OF_AREA_BINS)))
+    area_grid = np.array(np.meshgrid(longitude_bins, latitude_bins)).T.reshape(int(np.sqrt(NUM_OF_AREA_BINS)),
+                                                                               int(np.sqrt(NUM_OF_AREA_BINS)), 2)
 
     def get_area_bin(sample: pd.DataFrame) -> str:
         long = sample["long"]
@@ -94,22 +108,30 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     full_data["area_bin"] = full_data[["long", "lat"]].T.apply(get_area_bin)
     area_bins = pd.get_dummies(full_data["area_bin"])
 
-    # add missing bins
-    for i in range(NUM_OF_BINS):
+    # add missing area bins
+    count = 0
+    for i in range(NUM_OF_AREA_BINS):
         if f"area_bin_{i}" not in area_bins.head():
+            count += 1
             area_bins[f"area_bin_{i}"] = 0
-    area_bins = area_bins[[f"area_bin_{i}" for i in range(NUM_OF_BINS)]]  # sorted
+    print(count)
+    area_bins = area_bins[[f"area_bin_{i}" for i in range(NUM_OF_AREA_BINS)]]  # sorted
     data = pd.concat([data, area_bins], axis=1)
-    # data.insert(0, "bias", 1)
 
     # convert zip to zip_code_bins
+    zipcode_bins = pd.get_dummies(full_data["zipcode"])
+    data = pd.concat([data, zipcode_bins], axis=1)
+
+    #
+
 
     pd.DataFrame(data).to_csv("./temp_prices.csv")
+
     response = full_data["price"]
 
-    # replace missing value with mean
-    response.fillna(response.mean(), inplace=True)
-    return data.to_numpy(), response.to_numpy()
+    # # replace missing value with mean
+    # response.fillna(response.mean(), inplace=True)
+    return data, response
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -136,25 +158,32 @@ if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
-    train_X, test_X, train_y, test_y = train_test_split(data, response, test_size=0.25)
-    test_X = np.insert(test_X, 0, 1, axis=1)
+    # train_X, test_X, train_y, test_y = train_test_split(data, response, test_size=0.25)
+    train_X, train_y, test_X, test_y = split_train_test(data, response)
+    train_X = train_X.to_numpy()
+    train_y = train_y.to_numpy()
+    test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
+    test_y = test_y.to_numpy()
+    # print(pd.DataFrame(train_X).isnull().values.any())
+    # print(pd.DataFrame(train_y).isnull().values.any())
+    # print(pd.DataFrame(test_X).isnull().values.any())
+    # print(pd.DataFrame(test_y).isnull().values.any())
+    # test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
+    # pd.DataFrame(test_X).insert(0, "bias", 1)
+    # test_X = test_X["bias"]
+    pd.DataFrame(test_X).to_csv("./temp_train_X.csv")
+    np.insert(test_X, 0, 1, axis=1)
 
     reg = LinearRegression()
 
     # Fit model over data
-    reg.fit(np.array(train_X), np.array(train_y))
+    reg.fit(train_X, train_y)
     res = reg.predict(test_X)
     res = pd.DataFrame(res, columns=["pred_y"])
     res["test_y"] = test_y
+    res["error_prec"] = (res["pred_y"] - res["test_y"]).abs() / res["test_y"]
+    print(res["error_prec"].mean())
     pd.DataFrame(res).to_csv("./temp_res.csv")
-
-    # pred_neigh = reg.predict_proba(test_X)
-    # fpr_neigh, tpr_neigh, thresh_neigh = roc_curve(test_y, pred_neigh[:, 1],
-    #                                                pos_label=1)
-
-    # auc_score_neigh = roc_auc_score(test_y, pred_neigh[:, 1])
-
-    # print(f" auc score = {auc_score_neigh}")
 
     # Question 2 - Feature evaluation with respect to response
     # raise NotImplementedError()

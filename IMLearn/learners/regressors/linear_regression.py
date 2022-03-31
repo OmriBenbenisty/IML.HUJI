@@ -51,7 +51,7 @@ class LinearRegression(BaseEstimator):
         Fits model with or without an intercept depending on value of `self.include_intercept_`
         """
         W = lambda x: pinv(x) @ y
-        g = pinv(X)
+        # g = pinv(X)
         self.coefs_ = W(np.insert(X, 0, 1, axis=1)) if self.include_intercept_ else W(X)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
