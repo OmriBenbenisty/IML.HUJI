@@ -152,17 +152,27 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     """
     X_arr = X.to_numpy().T
     y = y.to_numpy()
-    corr = lambda x, y: np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
+    def corr(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        if np.var(x) == 0 or np.var(y) == 0:
+            return np.zeros(4).reshape((2,2))
+        return np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
+    # corr = lambda x, y: np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
     # corr = np.array([np.corrcoef(X_arr[i], y)[0,1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
     corr = np.array([corr(X_arr[i], y)[0,1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
     for i, c in enumerate(corr):
         if "area" not in str(X.columns[i]) and "98" not in str(X.columns[i]):
             go.Figure([go.Scatter(x=X_arr[i], y=y, mode='markers', name=r'$Response$')],
-                  layout=go.Layout(title={"text": f"Feature - {X.columns[i]} <br><sup>Pearson Correlation - {c}</sup>"},
+                  layout=go.Layout(title={"text": f"Feature - {X.columns[i]} <br><sup>Pearson Correlation - {c}</sup>",
+                                          "x": 0.5,
+                                          "xanchor": 'center'},
                                    titlefont={'family': 'Arial',
-                                              'size': 14},
-                                   xaxis_title=r"$\text{Feature Value}$",
-                                   yaxis_title=r"$\text{Response}$",
+                                              'size': 30},
+                                   xaxis_title={'text': "Feature Value",
+                                                'font': {'family': 'Arial',
+                                                                'size': 20}},
+                                   yaxis_title={'text': "Response",
+                                                'font': {'family': 'Arial',
+                                                                'size': 20}},
                                    width=1000,
                                    height=1000
                                    )
@@ -175,11 +185,9 @@ if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
-    train_X, train_y, test_X, test_y = split_train_test(data, response)
-    train_X = train_X.to_numpy()
-    train_y = train_y.to_numpy()
-    test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
-    test_y = test_y.to_numpy()
+
+
+
     # print(pd.DataFrame(train_X).isnull().values.any())
     # print(pd.DataFrame(train_y).isnull().values.any())
     # print(pd.DataFrame(test_X).isnull().values.any())
@@ -189,26 +197,27 @@ if __name__ == '__main__':
     # test_X = test_X["bias"]
 
 
-
     # Fit model over data
     reg = LinearRegression()
-    reg.fit(train_X, train_y)
-    res = reg.predict(test_X)
-    res = pd.DataFrame(res, columns=["pred_y"])
-    res["test_y"] = test_y
-    res["error_prec"] = (res["pred_y"] - res["test_y"]).abs() / res["test_y"].abs()
-    print(res["error_prec"].mean())
-    pd.DataFrame(res).to_csv("./temp_res.csv")
+    reg.fit(data.to_numpy(), response.to_numpy())
+
+    # res = pd.DataFrame(res, columns=["pred_y"])
+    # res["test_y"] = test_y
+    # res["error_prec"] = (res["pred_y"] - res["test_y"]).abs() / res["test_y"].abs()
+    # print(res["error_prec"].mean())
+    # pd.DataFrame(res).to_csv("./temp_res.csv")
 
     # Question 2 - Feature evaluation with respect to response
     feature_evaluation(data, response, "./Images")
-    # X = np.arange(100).reshape(10, 10)
-    # y = np.arange(10)
-    # # reg.fit(X, y)
-    # # reg.loss(X, y)
 
     # Question 3 - Split samples into training- and testing sets.
-    # raise NotImplementedError()
+    train_X, train_y, test_X, test_y = split_train_test(data, response)
+    train_X = train_X.to_numpy()
+    train_y = train_y.to_numpy()
+    test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
+    test_y = test_y.to_numpy()
+
+    res = reg.predict(test_X)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -217,4 +226,8 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    # raise NotImplementedError()
+    for p in range(10, 101):
+        for _ in range(10):
+            reg.fit(train_X) # TODO fit for every p
+
+    print("ended")
