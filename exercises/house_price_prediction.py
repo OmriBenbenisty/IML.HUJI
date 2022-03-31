@@ -60,6 +60,10 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     data["date"] = full_data["date"].apply(
         lambda x: pd.Timestamp(x).year + (pd.Timestamp(x).month / 10)
     )
+    #  replac missing with mean
+    data["date"].fillna(data["date"].mean(), inplace=True)
+
+
 
     # add time since renovated : today.year - max(yr_built, yr_renovated)
     data["since_renovated"] = pd.DataFrame(
@@ -71,7 +75,7 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     longitude_bins = np.linspace(full_data["long"].min(), full_data["long"].max(), int(np.sqrt(NUM_OF_BINS)))
     latitude_bins = np.linspace(full_data["lat"].min(), full_data["lat"].max(), int(np.sqrt(NUM_OF_BINS)))
     area_grid = np.array(np.meshgrid(longitude_bins, latitude_bins)).T.reshape(int(np.sqrt(NUM_OF_BINS)),
-                                                                                 int(np.sqrt(NUM_OF_BINS)), 2)
+                                                                               int(np.sqrt(NUM_OF_BINS)), 2)
 
     def get_area_bin(sample: pd.DataFrame) -> str:
         long = sample["long"]
@@ -89,18 +93,22 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
 
     full_data["area_bin"] = full_data[["long", "lat"]].T.apply(get_area_bin)
     area_bins = pd.get_dummies(full_data["area_bin"])
+
     # add missing bins
     for i in range(NUM_OF_BINS):
         if f"area_bin_{i}" not in area_bins.head():
             area_bins[f"area_bin_{i}"] = 0
     area_bins = area_bins[[f"area_bin_{i}" for i in range(NUM_OF_BINS)]]  # sorted
     data = pd.concat([data, area_bins], axis=1)
-    data.insert(0, "bias", 1)
+    # data.insert(0, "bias", 1)
 
-     # convert zip to zip_code_bins
+    # convert zip to zip_code_bins
 
     pd.DataFrame(data).to_csv("./temp_prices.csv")
     response = full_data["price"]
+
+    # replace missing value with mean
+    response.fillna(response.mean(), inplace=True)
     return data.to_numpy(), response.to_numpy()
 
 
@@ -128,16 +136,17 @@ if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
-    train_X, train_y, test_X, test_y = train_test_split(data, response, test_size=0.25)
+    train_X, test_X, train_y, test_y = train_test_split(data, response, test_size=0.25)
+    test_X = np.insert(test_X, 0, 1, axis=1)
 
     reg = LinearRegression()
 
     # Fit model over data
-    # estimator = AgodaCancellationEstimator().fit(train_X, train_y)
-    reg.fit(train_X, train_y)
+    reg.fit(np.array(train_X), np.array(train_y))
     res = reg.predict(test_X)
+    res = pd.DataFrame(res, columns=["pred_y"])
+    res["test_y"] = test_y
     pd.DataFrame(res).to_csv("./temp_res.csv")
-
 
     # pred_neigh = reg.predict_proba(test_X)
     # fpr_neigh, tpr_neigh, thresh_neigh = roc_curve(test_y, pred_neigh[:, 1],
@@ -145,7 +154,7 @@ if __name__ == '__main__':
 
     # auc_score_neigh = roc_auc_score(test_y, pred_neigh[:, 1])
 
-    print(f" auc score = {auc_score_neigh}")
+    # print(f" auc score = {auc_score_neigh}")
 
     # Question 2 - Feature evaluation with respect to response
     # raise NotImplementedError()
