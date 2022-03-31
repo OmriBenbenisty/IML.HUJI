@@ -158,7 +158,6 @@ if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
-    # train_X, test_X, train_y, test_y = train_test_split(data, response, test_size=0.25)
     train_X, train_y, test_X, test_y = split_train_test(data, response)
     train_X = train_X.to_numpy()
     train_y = train_y.to_numpy()
@@ -171,17 +170,16 @@ if __name__ == '__main__':
     # test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
     # pd.DataFrame(test_X).insert(0, "bias", 1)
     # test_X = test_X["bias"]
-    pd.DataFrame(test_X).to_csv("./temp_train_X.csv")
-    np.insert(test_X, 0, 1, axis=1)
 
-    reg = LinearRegression()
+
 
     # Fit model over data
+    reg = LinearRegression()
     reg.fit(train_X, train_y)
     res = reg.predict(test_X)
     res = pd.DataFrame(res, columns=["pred_y"])
     res["test_y"] = test_y
-    res["error_prec"] = (res["pred_y"] - res["test_y"]).abs() / res["test_y"]
+    res["error_prec"] = (res["pred_y"] - res["test_y"]).abs() / res["test_y"].abs()
     print(res["error_prec"].mean())
     pd.DataFrame(res).to_csv("./temp_res.csv")
 
