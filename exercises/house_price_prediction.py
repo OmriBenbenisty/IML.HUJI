@@ -17,9 +17,6 @@ KEEP = ["bedrooms", "bathrooms", "sqft_living", "sqft_lot",
 
 NUM_OF_AREA_BINS = 36  # should be a power of an int
 
-# TOTAL_AVERAGE = 0
-# AREA_BINS = np.zeros(NUM_OF_AREA_BINS)
-
 """
 date -> year.month
 renovated -> time since renovated : today.year - max(yr_built, yr_renovated)
@@ -60,15 +57,15 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
         if "sqft" in feature:
             full_data = full_data[full_data[str(feature)] >= 0]
 
-    # remove empty date
-    full_data = full_data[full_data["date"].notna()]
+    # remove empty date  *** Skipped duo to low correlation ***
+    # full_data = full_data[full_data["date"].notna()]
 
     data = full_data.drop(DROP, axis=1)
 
-    # Convert date to year.month 201412 -> 2014.12
-    data["date"] = full_data["date"].apply(
-        lambda x: pd.Timestamp(x).year + (pd.Timestamp(x).month / 10)
-    )
+    # Convert date to year.month 201412 -> 2014.12 *** Skipped duo to low correlation ***
+    # data["date"] = full_data["date"].apply(
+    #     lambda x: pd.Timestamp(x).year + (pd.Timestamp(x).month / 10)
+    # )
 
     # add time since renovated : today.year - max(yr_built, yr_renovated)
     data["since_renovated"] = pd.DataFrame(
@@ -76,11 +73,12 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
         - pd.Timestamp.today().year).abs()
 
     # create long lat to areas bins
-
-    longitude_bins = np.linspace(full_data["long"].min(), full_data["long"].max(), int(np.sqrt(NUM_OF_AREA_BINS)))
-    latitude_bins = np.linspace(full_data["lat"].min(), full_data["lat"].max(), int(np.sqrt(NUM_OF_AREA_BINS)))
-    area_grid = np.array(np.meshgrid(longitude_bins, latitude_bins)).T.reshape(int(np.sqrt(NUM_OF_AREA_BINS)),
-                                                                               int(np.sqrt(NUM_OF_AREA_BINS)), 2)
+    longitude_bins = np.linspace(full_data["long"].min(), full_data["long"].max(),
+                                 int(np.sqrt(NUM_OF_AREA_BINS)))
+    latitude_bins = np.linspace(full_data["lat"].min(), full_data["lat"].max(),
+                                int(np.sqrt(NUM_OF_AREA_BINS)))
+    area_grid = np.array(np.meshgrid(longitude_bins, latitude_bins)).T.reshape(
+        int(np.sqrt(NUM_OF_AREA_BINS)), int(np.sqrt(NUM_OF_AREA_BINS)), 2)
 
     def get_area_bin(sample: pd.DataFrame) -> str:
         long = sample["long"]
@@ -92,7 +90,7 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
             if lat > area_grid[row][col][1]:
                 col += 1
             if long <= area_grid[row][col][0] and lat <= area_grid[row][col][1]:
-                break  # in correct bin
+                break  # correct bin
         bin_num = row * area_grid.shape[0] + col
         return f"area_bin_{bin_num}"
 
@@ -107,17 +105,11 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     data = pd.concat([data, area_bins], axis=1)
 
     # convert zip to zip_code_bins
-    zipcode_bins = pd.get_dummies(full_data["zipcode"])
+    zipcode_bins = pd.get_dummies(full_data["zipcode"], prefix='zipcode_')
     data = pd.concat([data, zipcode_bins], axis=1)
-
-    #
-
-    pd.DataFrame(data).to_csv("./temp_prices.csv")
 
     response = full_data["price"]
 
-    # # replace missing value with mean
-    # response.fillna(response.mean(), inplace=True)
     return data, response
 
 
@@ -141,16 +133,14 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     X_arr = X.to_numpy().T
     y = y.to_numpy()
 
-    def corr(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    def corr_coef(x: np.ndarray, y: np.ndarray) -> np.ndarray:
         if np.var(x) == 0 or np.var(y) == 0:
             return np.zeros(4).reshape((2, 2))
         return np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
 
-    # corr = lambda x, y: np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
-    # corr = np.array([np.corrcoef(X_arr[i], y)[0,1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
-    corr = np.array([corr(X_arr[i], y)[0, 1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
+    corr = np.array([corr_coef(X_arr[i], y)[0, 1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
     for i, c in enumerate(corr):
-        if "area" not in str(X.columns[i]) and "98" not in str(X.columns[i]):
+        if "area" not in str(X.columns[i]) and "zipcode" not in str(X.columns[i]):
             go.Figure([go.Scatter(x=X_arr[i], y=y, mode='markers', name=r'$Response$')],
                       layout=go.Layout(
                           title={"text": f"Feature - {X.columns[i]} <br><sup>Pearson Correlation - {c}</sup>",
@@ -172,39 +162,19 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
 
 if __name__ == '__main__':
     np.random.seed(0)
+
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
 
-    # print(pd.DataFrame(train_X).isnull().values.any())
-    # print(pd.DataFrame(train_y).isnull().values.any())
-    # print(pd.DataFrame(test_X).isnull().values.any())
-    # print(pd.DataFrame(test_y).isnull().values.any())
-    # test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
-    # pd.DataFrame(test_X).insert(0, "bias", 1)
-    # test_X = test_X["bias"]
 
-    # Fit model over data
-    reg = LinearRegression().fit(data.to_numpy(), response.to_numpy())
-
-
-    # res = pd.DataFrame(res, columns=["pred_y"])
-    # res["test_y"] = test_y
-    # res["error_prec"] = (res["pred_y"] - res["test_y"]).abs() / res["test_y"].abs()
-    # print(res["error_prec"].mean())
-    # pd.DataFrame(res).to_csv("./temp_res.csv")
 
     # Question 2 - Feature evaluation with respect to response
     # feature_evaluation(data, response, "./Images")
 
     # Question 3 - Split samples into training- and testing sets.
     train_X, train_y, test_X, test_y = split_train_test(data, response)
-    # train_X = train_X.to_numpy()
-    # train_y = train_y.to_numpy()
-    # test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
     test_X = test_X.to_numpy()
     test_y = test_y.to_numpy()
-
-    # res = reg.predict(test_X)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -214,16 +184,15 @@ if __name__ == '__main__':
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
 
-
-    train = pd.concat([train_X, train_y], axis=1)
+    reg = LinearRegression()
     repeat = 10
     mean_std = np.zeros(182).reshape((91, 2))
     for p in range(10, 101):
         loss = np.zeros(repeat)
         for i in range(repeat):
-            train_p = train.sample(frac=p / 100)
-            X, y = train_p.iloc[:, :-1].to_numpy(), train_p.iloc[:, -1:].to_numpy()
-            reg.fit(X, y)
+            X = train_X.sample(frac=p / 100)
+            y = train_y[X.index]
+            reg.fit(X.to_numpy(), y.to_numpy())
             loss[i] = reg.loss(test_X, test_y)
         mean_std[p - 10][0], mean_std[p - 10][1] = loss.mean(), loss.std()
     y_top = mean_std[:, 0] + (2 * mean_std[:, 1])
@@ -257,9 +226,7 @@ if __name__ == '__main__':
             yaxis_title={'text': "Loss Over Train Set",
                          'font': {'family': 'Arial',
                                   'size': 20}},
-            width=1000,
-            height=1300
+            width=2000,
+            height=1000
         )
-    ).write_image(f"Images/mean_loss_graph.png")
-
-    print("ended")
+    ).show()
