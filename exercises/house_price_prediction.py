@@ -21,8 +21,9 @@ NUM_OF_AREA_BINS = 36  # should be a power of an int
 date -> year.month
 renovated -> time since renovated : today.year - max(yr_built, yr_renovated)
 
-long-lat -> average in section
-            if new sample arrives and doesnt have bin, it gets the total average
+long-lat -> area bins
+            if new sample arrives and doesnt have bin, its assigned to the
+            closest bin
 zip -> zip code dummies
 """
 
@@ -223,7 +224,7 @@ if __name__ == '__main__':
             xaxis_title={'text': "Train Set Percentage",
                          'font': {'family': 'Arial',
                                   'size': 20}},
-            yaxis_title={'text': "Loss Over Train Set",
+            yaxis_title={'text': "Loss Over Test Set",
                          'font': {'family': 'Arial',
                                   'size': 20}},
             width=2000,
