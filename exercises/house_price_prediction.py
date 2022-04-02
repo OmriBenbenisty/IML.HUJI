@@ -167,8 +167,6 @@ if __name__ == '__main__':
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
 
-
-
     # Question 2 - Feature evaluation with respect to response
     # feature_evaluation(data, response, "./Images")
 

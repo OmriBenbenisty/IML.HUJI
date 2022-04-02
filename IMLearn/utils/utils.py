@@ -33,14 +33,11 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
         Responses of test samples
 
     """
-    data = pd.concat([X, y], axis=1)
-    train_X_y = data.sample(frac=train_proportion)
-    test_X_y = data.drop(train_X_y.index)
+    train_X = X.sample(frac=train_proportion)
+    train_y = y[train_X.index]
 
-    train_X = train_X_y.iloc[:, :-1]
-    train_y = train_X_y.iloc[:, -1:].squeeze()
-    test_X = test_X_y.iloc[:, :-1]
-    test_y = test_X_y.iloc[:, -1:].squeeze()
+    test_X = X.drop(index=train_X.index)
+    test_y = y.drop(index=train_X.index)
     return train_X, train_y, test_X, test_y
 
 
