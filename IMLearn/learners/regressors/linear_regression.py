@@ -68,7 +68,6 @@ class LinearRegression(BaseEstimator):
             Predicted responses of given samples
         """
         return X @ self.coefs_
-        # return np.sum(X * self.coefs_, axis=1)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -87,4 +86,4 @@ class LinearRegression(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        return mean_square_error(self._predict(X), y)
+        return mean_square_error(self._predict(np.insert(X, 0, 1, axis=1) if self.include_intercept_ else X), y)

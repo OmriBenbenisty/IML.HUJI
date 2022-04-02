@@ -17,8 +17,8 @@ KEEP = ["bedrooms", "bathrooms", "sqft_living", "sqft_lot",
 
 NUM_OF_AREA_BINS = 36  # should be a power of an int
 
-TOTAL_AVERAGE = 0
-AREA_BINS = np.zeros(NUM_OF_AREA_BINS)
+# TOTAL_AVERAGE = 0
+# AREA_BINS = np.zeros(NUM_OF_AREA_BINS)
 
 """
 date -> year.month
@@ -26,7 +26,7 @@ renovated -> time since renovated : today.year - max(yr_built, yr_renovated)
 
 long-lat -> average in section
             if new sample arrives and doesnt have bin, it gets the total average
-
+zip
 """
 
 
@@ -48,9 +48,6 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     # Remove prices under or equal to 0
     full_data = full_data[full_data["price"] > 0]
 
-    # remove invalid sqft
-    # full_data = full_data[full_data['sqft_living'] <= full_data['sqft_lot']]
-
     # remove empty price
     full_data = full_data[full_data["price"].notna()]
 
@@ -59,9 +56,9 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     full_data = full_data[full_data["zipcode"] > 0]
 
     # remove sqft under 0
-    for col in full_data.head():
-        if ("sqft" in col):
-            full_data = full_data[full_data[str(col)] >= 0]
+    for feature in full_data.head():
+        if "sqft" in feature:
+            full_data = full_data[full_data[str(feature)] >= 0]
 
     # remove empty date
     full_data = full_data[full_data["date"].notna()]
@@ -189,8 +186,8 @@ if __name__ == '__main__':
     # test_X = test_X["bias"]
 
     # Fit model over data
-    reg = LinearRegression()
-    reg.fit(data.to_numpy(), response.to_numpy())
+    reg = LinearRegression().fit(data.to_numpy(), response.to_numpy())
+
 
     # res = pd.DataFrame(res, columns=["pred_y"])
     # res["test_y"] = test_y
@@ -221,14 +218,14 @@ if __name__ == '__main__':
     train = pd.concat([train_X, train_y], axis=1)
     repeat = 10
     mean_std = np.zeros(182).reshape((91, 2))
-    for p in range(10, 20):
+    for p in range(10, 101):
         loss = np.zeros(repeat)
         for i in range(repeat):
             train_p = train.sample(frac=p / 100)
             X, y = train_p.iloc[:, :-1].to_numpy(), train_p.iloc[:, -1:].to_numpy()
             reg.fit(X, y)
 
-            loss[i] = reg.loss(np.insert(test_X, 0, 1, axis=1), test_y)
+            loss[i] = reg.loss(test_X, test_y)
         mean_std[p - 10][0], mean_std[p - 10][1] = loss.mean(), loss.std()
     y_top = mean_std[:, 0] + (2 * mean_std[:, 1])
     y_min = mean_std[:, 0] - (2 * mean_std[:, 1])
@@ -248,10 +245,9 @@ if __name__ == '__main__':
             line=dict(color='rgba(255,255,255,0)'),
             hoverinfo='skip',
             name=r"$\text{Loss Mean} \pm \text{2 * Loss STD Over 10 Repetitions}$"
-
         )],
         layout=go.Layout(
-            title={"text": f"Loss Over Train Set As a Function of Test Set Percentage",
+            title={"text": f"Loss Over Test Set As a Function of Train Set Percentage",
                    "x": 0.5,
                    "xanchor": 'center'},
             titlefont={'family': 'Arial',
