@@ -26,7 +26,7 @@ renovated -> time since renovated : today.year - max(yr_built, yr_renovated)
 
 long-lat -> average in section
             if new sample arrives and doesnt have bin, it gets the total average
-zip
+zip -> zip code dummies
 """
 
 
@@ -69,8 +69,6 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     data["date"] = full_data["date"].apply(
         lambda x: pd.Timestamp(x).year + (pd.Timestamp(x).month / 10)
     )
-    #  replace missing with mean
-    # data["date"].fillna(data["date"].mean(), inplace=True)
 
     # add time since renovated : today.year - max(yr_built, yr_renovated)
     data["since_renovated"] = pd.DataFrame(
@@ -87,25 +85,25 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     def get_area_bin(sample: pd.DataFrame) -> str:
         long = sample["long"]
         lat = sample["lat"]
-        i, j, bin_num = 0, 0, 0
-        while i < area_grid.shape[0] and j < area_grid.shape[1]:
-            if long > area_grid[i][j][0]:
-                i += 1
-            if lat > area_grid[i][j][1]:
-                j += 1
-            if long <= area_grid[i][j][0] and lat <= area_grid[i][j][1]:
+        row, col, bin_num = 0, 0, 0
+        while row < area_grid.shape[0] and col < area_grid.shape[1]:
+            if long > area_grid[row][col][0]:
+                row += 1
+            if lat > area_grid[row][col][1]:
+                col += 1
+            if long <= area_grid[row][col][0] and lat <= area_grid[row][col][1]:
                 break  # in correct bin
-        bin_num = i * area_grid.shape[0] + j
+        bin_num = row * area_grid.shape[0] + col
         return f"area_bin_{bin_num}"
 
     full_data["area_bin"] = full_data[["long", "lat"]].T.apply(get_area_bin)
     area_bins = pd.get_dummies(full_data["area_bin"])
 
     # add missing area bins
-    for i in range(NUM_OF_AREA_BINS):
-        if f"area_bin_{i}" not in area_bins.head():
-            area_bins[f"area_bin_{i}"] = 0
-    area_bins = area_bins[[f"area_bin_{i}" for i in range(NUM_OF_AREA_BINS)]]  # sorted
+    for j in range(NUM_OF_AREA_BINS):
+        if f"area_bin_{j}" not in area_bins.head():
+            area_bins[f"area_bin_{j}"] = 0
+    area_bins = area_bins[[f"area_bin_{bin_num}" for bin_num in range(NUM_OF_AREA_BINS)]]  # sorted
     data = pd.concat([data, area_bins], axis=1)
 
     # convert zip to zip_code_bins
@@ -215,6 +213,8 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
+
+
     train = pd.concat([train_X, train_y], axis=1)
     repeat = 10
     mean_std = np.zeros(182).reshape((91, 2))
@@ -224,7 +224,6 @@ if __name__ == '__main__':
             train_p = train.sample(frac=p / 100)
             X, y = train_p.iloc[:, :-1].to_numpy(), train_p.iloc[:, -1:].to_numpy()
             reg.fit(X, y)
-
             loss[i] = reg.loss(test_X, test_y)
         mean_std[p - 10][0], mean_std[p - 10][1] = loss.mean(), loss.std()
     y_top = mean_std[:, 0] + (2 * mean_std[:, 1])
@@ -233,7 +232,7 @@ if __name__ == '__main__':
         go.Scatter(
             x=list(range(10, 101)),
             y=mean_std[:, 0],
-            mode='lines',
+            mode='markers+lines',
             line=dict(color='rgb(0,100,80)'),
             name="Loss Mean Over 10 Repetitions"
         ),
@@ -252,7 +251,7 @@ if __name__ == '__main__':
                    "xanchor": 'center'},
             titlefont={'family': 'Arial',
                        'size': 30},
-            xaxis_title={'text': "Test Set Percentage",
+            xaxis_title={'text': "Train Set Percentage",
                          'font': {'family': 'Arial',
                                   'size': 20}},
             yaxis_title={'text': "Loss Over Train Set",
@@ -262,4 +261,5 @@ if __name__ == '__main__':
             height=1300
         )
     ).write_image(f"Images/mean_loss_graph.png")
+
     print("ended")
