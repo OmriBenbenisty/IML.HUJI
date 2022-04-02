@@ -48,11 +48,11 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     # Remove prices under or equal to 0
     full_data = full_data[full_data["price"] > 0]
 
+    # remove invalid sqft
+    # full_data = full_data[full_data['sqft_living'] <= full_data['sqft_lot']]
+
     # remove empty price
     full_data = full_data[full_data["price"].notna()]
-
-
-
 
     # remove 0 or empty zipcode
     full_data = full_data[full_data["zipcode"].notna()]
@@ -63,14 +63,10 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
         if ("sqft" in col):
             full_data = full_data[full_data[str(col)] >= 0]
 
-
-
     # remove empty date
     full_data = full_data[full_data["date"].notna()]
 
-
     data = full_data.drop(DROP, axis=1)
-
 
     # Convert date to year.month 201412 -> 2014.12
     data["date"] = full_data["date"].apply(
@@ -78,8 +74,6 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
     )
     #  replace missing with mean
     # data["date"].fillna(data["date"].mean(), inplace=True)
-
-
 
     # add time since renovated : today.year - max(yr_built, yr_renovated)
     data["since_renovated"] = pd.DataFrame(
@@ -123,7 +117,6 @@ def load_data(filename: str) -> (np.ndarray, np.ndarray):
 
     #
 
-
     pd.DataFrame(data).to_csv("./temp_prices.csv")
 
     response = full_data["price"]
@@ -152,41 +145,40 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     """
     X_arr = X.to_numpy().T
     y = y.to_numpy()
+
     def corr(x: np.ndarray, y: np.ndarray) -> np.ndarray:
         if np.var(x) == 0 or np.var(y) == 0:
-            return np.zeros(4).reshape((2,2))
+            return np.zeros(4).reshape((2, 2))
         return np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
+
     # corr = lambda x, y: np.cov(x, y) / np.sqrt(np.var(x) * np.var(y))
     # corr = np.array([np.corrcoef(X_arr[i], y)[0,1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
-    corr = np.array([corr(X_arr[i], y)[0,1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
+    corr = np.array([corr(X_arr[i], y)[0, 1] for i in range(X_arr.shape[0])]).reshape((X_arr.shape[0]))
     for i, c in enumerate(corr):
         if "area" not in str(X.columns[i]) and "98" not in str(X.columns[i]):
             go.Figure([go.Scatter(x=X_arr[i], y=y, mode='markers', name=r'$Response$')],
-                  layout=go.Layout(title={"text": f"Feature - {X.columns[i]} <br><sup>Pearson Correlation - {c}</sup>",
-                                          "x": 0.5,
-                                          "xanchor": 'center'},
-                                   titlefont={'family': 'Arial',
-                                              'size': 30},
-                                   xaxis_title={'text': "Feature Value",
-                                                'font': {'family': 'Arial',
-                                                                'size': 20}},
-                                   yaxis_title={'text': "Response",
-                                                'font': {'family': 'Arial',
-                                                                'size': 20}},
-                                   width=1000,
-                                   height=1000
-                                   )
+                      layout=go.Layout(
+                          title={"text": f"Feature - {X.columns[i]} <br><sup>Pearson Correlation - {c}</sup>",
+                                 "x": 0.5,
+                                 "xanchor": 'center'},
+                          titlefont={'family': 'Arial',
+                                     'size': 30},
+                          xaxis_title={'text': "Feature Value",
+                                       'font': {'family': 'Arial',
+                                                'size': 20}},
+                          yaxis_title={'text': "Response",
+                                       'font': {'family': 'Arial',
+                                                'size': 20}},
+                          width=1000,
+                          height=1000
+                      )
                       ).write_image(f"{output_path}/{X.columns[i]}_graph.png")
-
-
 
 
 if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
     data, response = load_data("../datasets/house_prices.csv")
-
-
 
     # print(pd.DataFrame(train_X).isnull().values.any())
     # print(pd.DataFrame(train_y).isnull().values.any())
@@ -195,7 +187,6 @@ if __name__ == '__main__':
     # test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
     # pd.DataFrame(test_X).insert(0, "bias", 1)
     # test_X = test_X["bias"]
-
 
     # Fit model over data
     reg = LinearRegression()
@@ -208,16 +199,17 @@ if __name__ == '__main__':
     # pd.DataFrame(res).to_csv("./temp_res.csv")
 
     # Question 2 - Feature evaluation with respect to response
-    feature_evaluation(data, response, "./Images")
+    # feature_evaluation(data, response, "./Images")
 
     # Question 3 - Split samples into training- and testing sets.
     train_X, train_y, test_X, test_y = split_train_test(data, response)
-    train_X = train_X.to_numpy()
-    train_y = train_y.to_numpy()
-    test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
+    # train_X = train_X.to_numpy()
+    # train_y = train_y.to_numpy()
+    # test_X = np.insert(test_X.to_numpy(), 0, 1, axis=1)
+    test_X = test_X.to_numpy()
     test_y = test_y.to_numpy()
 
-    res = reg.predict(test_X)
+    # res = reg.predict(test_X)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -226,8 +218,52 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    for p in range(10, 101):
-        for _ in range(10):
-            reg.fit(train_X) # TODO fit for every p
+    train = pd.concat([train_X, train_y], axis=1)
+    repeat = 10
+    mean_std = np.zeros(182).reshape((91, 2))
+    for p in range(10, 20):
+        loss = np.zeros(repeat)
+        for i in range(repeat):
+            train_p = train.sample(frac=p / 100)
+            X, y = train_p.iloc[:, :-1].to_numpy(), train_p.iloc[:, -1:].to_numpy()
+            reg.fit(X, y)
 
+            loss[i] = reg.loss(np.insert(test_X, 0, 1, axis=1), test_y)
+        mean_std[p - 10][0], mean_std[p - 10][1] = loss.mean(), loss.std()
+    y_top = mean_std[:, 0] + (2 * mean_std[:, 1])
+    y_min = mean_std[:, 0] - (2 * mean_std[:, 1])
+    go.Figure([
+        go.Scatter(
+            x=list(range(10, 101)),
+            y=mean_std[:, 0],
+            mode='lines',
+            line=dict(color='rgb(0,100,80)'),
+            name="Loss Mean Over 10 Repetitions"
+        ),
+        go.Scatter(
+            x=list(range(10, 101)) + list(range(10, 101))[::-1],
+            y=np.concatenate((y_top, y_min[::-1])),
+            fill='toself',
+            fillcolor='rgba(0,100,80,0.2)',
+            line=dict(color='rgba(255,255,255,0)'),
+            hoverinfo='skip',
+            name=r"$\text{Loss Mean} \pm \text{2 * Loss STD Over 10 Repetitions}$"
+
+        )],
+        layout=go.Layout(
+            title={"text": f"Loss Over Train Set As a Function of Test Set Percentage",
+                   "x": 0.5,
+                   "xanchor": 'center'},
+            titlefont={'family': 'Arial',
+                       'size': 30},
+            xaxis_title={'text': "Test Set Percentage",
+                         'font': {'family': 'Arial',
+                                  'size': 20}},
+            yaxis_title={'text': "Loss Over Train Set",
+                         'font': {'family': 'Arial',
+                                  'size': 20}},
+            width=1000,
+            height=1300
+        )
+    ).write_image(f"Images/mean_loss_graph.png")
     print("ended")
