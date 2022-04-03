@@ -166,7 +166,8 @@ if __name__ == '__main__':
 
     # Question 5 - Evaluating fitted model on different countries
 
-    poly_fit_5 = PolynomialFitting(5).fit(israel_data["day_of_year"], israel_data["Temp"])
+    poly_fit_5 = PolynomialFitting(5).fit(israel_data["day_of_year"],
+                                          israel_data["Temp"])
     country_loss = pd.DataFrame({'Country': ["The Netherlands",
                                              "South Africa",
                                              "Jordan"],
@@ -182,7 +183,8 @@ if __name__ == '__main__':
            x=country_loss['Country'],
            y=country_loss['Loss']
            ).update_layout(
-        title={"text": f"Loss Over Different Countries<br> <sup> With A Polynomial Fit For Israel With Degree of 5</sup>",
+        title={"text": f"Loss Over Different Countries<br> <sup>"
+                       f" With A Polynomial Fit For Israel With Degree of 5</sup>",
                "x": 0.5,
                "xanchor": 'center'},
         titlefont={'family': 'Arial',
