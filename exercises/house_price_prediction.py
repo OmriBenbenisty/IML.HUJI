@@ -159,6 +159,10 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
                           height=1000
                       )
                       ).write_image(f"{output_path}/{X.columns[i]}_graph.png")
+    # zip_mean = [corr[i] for i in range(X_arr.shape[0]) if "zipcode" in X.columns[i]]
+    # print(np.mean(zip_mean))
+    # area_mean = [corr[i] for i in range(X_arr.shape[0]) if "area" in X.columns[i]]
+    # print(np.mean(area_mean))
 
 
 if __name__ == '__main__':

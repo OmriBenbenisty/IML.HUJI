@@ -6,7 +6,9 @@ import pandas as pd
 import plotly.express as px
 import plotly.io as pio
 import plotly.graph_objects as go
+
 pio.templates.default = "simple_white"
+pio.renderers.default = "browser"
 
 
 def load_data(filename: str) -> pd.DataFrame:
@@ -43,29 +45,27 @@ if __name__ == '__main__':
     # plot graphs
 
     # Temperature in Israel As Function Of Day Of Year
-    go.Figure(
-        [go.Scatter(
-            x=israel_data["day_of_year"],
-            y=israel_data["Temp"],
-            mode='markers',
-            name='Temperature in Israel Per Day Of Year'
-        )],
-        layout=go.Layout(
-            title={"text": f"Temperature in Israel As Function Of Day Of Year",
-                   "x": 0.5,
-                   "xanchor": 'center'},
-            titlefont={'family': 'Arial',
-                       'size': 30},
-            xaxis_title={'text': "Day of Year",
-                         'font': {'family': 'Arial',
-                                  'size': 20}},
-            yaxis_title={'text': "Temperature",
-                         'font': {'family': 'Arial',
-                                  'size': 20}},
-            yaxis=dict(dtick=1),
-            width=1500,
-            height=800
-        )
+    israel_data['Year'] = israel_data['Year'].astype(str)
+    px.scatter(
+        data_frame=israel_data,
+        x="day_of_year",
+        y="Temp",
+        color='Year'
+    ).update_layout(
+        title={"text": f"Temperature in Israel As Function Of Day Of Year",
+               "x": 0.5,
+               "xanchor": 'center'},
+        titlefont={'family': 'Arial',
+                   'size': 30},
+        xaxis_title={'text': "Day of Year",
+                     'font': {'family': 'Arial',
+                              'size': 20}},
+        yaxis_title={'text': "Temperature",
+                     'font': {'family': 'Arial',
+                              'size': 20}},
+        yaxis=dict(dtick=1),
+        width=1500,
+        height=800,
     ).show()
 
     # Temperature STD As a Function of Month in Israel
