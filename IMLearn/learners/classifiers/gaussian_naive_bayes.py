@@ -2,10 +2,12 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 
+
 class GaussianNaiveBayes(BaseEstimator):
     """
     Gaussian Naive-Bayes classifier
     """
+
     def __init__(self):
         """
         Instantiate a Gaussian Naive Bayes classifier
@@ -39,7 +41,16 @@ class GaussianNaiveBayes(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.classes_, counts = np.unique(y, return_counts=True)
+        self.mu_ = np.ndarray(shape=(self.classes_.shape[0], X.shape[1]))
+        self.vars_ = np.ndarray(shape=(self.classes_.shape[0], X.shape[1]))
+        for i, k in enumerate(self.classes_):
+            X_k = X[y == k]
+            self.mu_[i] = np.sum(X_k) / counts[i]
+            self.pi_[i] = counts[i] / y.shape[0]
+            X_k_mu_yi = X_k - self.mu_[i]
+            self.vars_[i] = np.var(X_k, axis=1)
+            # X_k_mu_yi.T @ X_k_mu_yi
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -55,7 +66,11 @@ class GaussianNaiveBayes(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        return np.fromiter(map(lambda y: self.classes_[y],
+                               np.argmax((self.likelihood(X) * self.pi_ /
+                                         ((np.exp(-(((X - self.mu_) ** 2) / (2 * self.vars_))))
+                                          / np.sqrt(2 * np.pi * self.vars_))), axis=1)),
+                           dtype=type(self.classes_[0]))
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
