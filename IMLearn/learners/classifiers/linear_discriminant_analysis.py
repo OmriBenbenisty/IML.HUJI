@@ -50,23 +50,27 @@ class LDA(BaseEstimator):
         # _, y_t = np.unique(y, return_inverse=True)  # non-negative ints
         # self.priors_ = np.bincount(y_t) / float(len(y))
 
-        self.classes_, counts = np.unique(y, return_counts=True)
+        self.classes_ = np.unique(y)
         n_classes = self.classes_.shape[0]
         n_features = X.shape[1]
         n_samples = y.shape[0]
-        self.mu_ = np.ndarray(shape=(n_classes, n_features))
+        self.mu_ = np.zeros(shape=(n_classes, n_features))
         self.pi_ = np.zeros(n_classes)
         self.cov_ = np.zeros((n_features, n_features))
         for i, k in enumerate(self.classes_):
             X_k = X[y == k]
             self.mu_[i] = np.mean(X_k, axis=0)  # np.sum(X_k) / counts[i]
-            self.pi_[i] = counts[i] / n_samples
+            self.pi_[i] = X_k.shape[0] / n_samples
             X_k_mu_yi = X_k - self.mu_[i]  # n_k,n_features
             self.cov_ += X_k_mu_yi.T.dot(X_k_mu_yi)  # n_features,n_k  * n_k,n_features -> (n_features, n_features)
         self.cov_ /= (n_samples - n_classes)  # divide by  m-K
         self._cov_inv = inv(self.cov_)  # (n_features, n_features)
-        self._a = self._cov_inv.T @ self.mu_  # (n_features,n_features) * (n_classes,n_features)
-        self._b = np.log(self.pi_) - 0.5 * self.mu_.T @ self._cov_inv @ self.mu_
+        self._a = (self._cov_inv @ self.mu_.T).T
+        # ((n_features,n_features) * (n_features,n_classes)).T ->
+        # (n_features,n_classes).T -> (n_classes, n_features)
+        self._b = (-0.5 * np.einsum('ij,ij->i', self.mu_ @ self._cov_inv, self.mu_) +
+                   np.log(self.pi_))  # ->  (n_classes) + (n_classes) -> (n_classes)
+        # - (n_classes, n_features) @ (n_features, n_features) *(dot) (n_classes, n_features) + (n_classes)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -92,9 +96,21 @@ class LDA(BaseEstimator):
         #               np.dot(self.mu_[i] @ self.cov_, self.mu_[i])*0.5 +\
         #               np.log(self.pi_[i])
         # return pred
-        return np.fromiter(map(lambda y: self.classes_[y],
-                               np.argmax(self._a @ X + self._b, axis=1)),
-                           dtype=type(self.classes_[0]))
+        pred = np.empty((self.classes_.shape[0], X.shape[0]))  # (n_classes, n_samples)
+        #  self._a @ X + self._b    (n_features,n_classes) * (n_samples, n_features) + (n_classes, n_classes) ->
+        #  self._a.T @ X.T + self._b    (n_classes,n_features) * (n_features,n_samples) + (n_classes, n_classes) ->
+        for i in range(len(self.classes_)):
+            a_k = self._a[i]  # (n_features)
+            b_k = self._b[i]  # (1)
+            pred[i] = a_k @ X.T + b_k  # (1,n_features) * (n_features, n_samples) + (1) -> (n_samples)
+        # pred = np.argmax(pred.T, axis=1)
+        pred = np.argmax(pred, axis=0)  # (n_samples)
+        return np.fromiter(map(lambda y: self.classes_[y], pred),
+                           dtype=type(self.classes_[0]))  # (n_samples)
+
+        # return np.fromiter(map(lambda y: self.classes_[y],
+        #                        np.argmax(self._a @ X + self._b, axis=1)),
+        #                    dtype=type(self.classes_[0]))
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -113,12 +129,21 @@ class LDA(BaseEstimator):
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
-        prob = np.empty((X.shape[0], self.classes_.shape[0]))
-        for i, c in enumerate(self.classes_):
-            prob[i] = np.exp(-0.5 * (X - self.mu_[i]).T @ self._cov_inv @
-                             (X - self.mu_[i])) / np.sqrt(((2 * np.pi) ** X.shape[1]) *
-                                                          det(self.cov_)) * \
-                      self.pi_[i]
+        prob = np.empty((self.classes_.shape[0], X.shape[0]))  # (n_classes, n_samples)
+        #  self._a @ X + self._b    (n_features,n_classes) * (n_samples, n_features) + (n_classes, n_classes) ->
+        #  self._a.T @ X.T + self._b    (n_classes,n_features) * (n_features,n_samples) + (n_classes, n_classes) ->
+        for i in range(len(self.classes_)):
+            mu_k = self.mu_[i]  # (n_features)
+            det_cov = det(self.cov_)
+            pi_k = self.pi_[i]
+            X_mu_k = X - mu_k  # (n_samples, n_features) - (n_features) -> (n_samples, n_features)
+            prob[i] = (pi_k *
+                       (np.exp(-0.5 * np.einsum('ij,ji->i', X_mu_k @ self._cov_inv, X_mu_k.T))
+                        / np.sqrt(((2 * np.pi) ** X.shape[1]) * det_cov)))
+            # (n_samples,n_features) @  (n_features, n_features) * (n_samples, n_features)-> (n_samples)
+            #  (n_features) * (n_features, n_samples) + (n_classes)
+
+        return prob.T  # (n_samples, n_classes)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
