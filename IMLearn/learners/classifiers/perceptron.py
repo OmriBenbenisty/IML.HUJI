@@ -78,7 +78,6 @@ class Perceptron(BaseEstimator):
         self.coefs_ = np.zeros(_X.shape[1])
         self.fitted_ = True
         for _ in range(self.max_iter_):
-            # res = np.nonzero(y * (_X @ self.coefs_) <= 0)  #
             res = np.where(y * (_X @ self.coefs_) <= 0)
             if res[0].size > 0:
                 i = res[0][0]
@@ -86,15 +85,6 @@ class Perceptron(BaseEstimator):
                 self.callback_(self, _X[i], y[i])
             else:
                 return
-            # found = False
-            # for i in range(_X.shape[0]):
-            #     if y[i] * np.inner(_X[i], self.coefs_) <= 0:
-            #         self.coefs_ += y[i] * _X[i]
-            #         self.callback_(self, _X[i], y[i])
-            #         found = True
-            #         break
-            # if not found:
-            #     return
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """

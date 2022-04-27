@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 from math import atan2, pi
-from IMLearn.metrics.loss_functions import misclassification_error
 
 plotly.io.renderers.default = "browser"
 
@@ -50,17 +49,19 @@ def run_perceptron():
 
         # Fit Perceptron and record loss in each fit iteration
         losses = []
-        Perceptron(callback=lambda p, x, y_i: losses.append(p.loss(X, y)), include_intercept=False).fit(X, y)
+        Perceptron(callback=lambda p, x, y_i: losses.append(p.loss(X, y))).fit(X, y)
 
-        px.scatter(
-            x=X[:, :1].reshape(X.shape[0]),
-            y=X[:, 1].reshape(X.shape[0]),
-            color=y.astype(str)
-        ).show()
+        # plot the data
+        # px.scatter(
+        #     x=X[:, :1].reshape(X.shape[0]),
+        #     y=X[:, 1].reshape(X.shape[0]),
+        #     color=y.astype(str)
+        # ).show()
+
         # Plot figure of loss as function of fitting iteration
         go.Figure(
             data=[go.Scatter(
-                x=list(range(len(losses))),
+                x=list(range(1, len(losses) + 1)),
                 y=losses,
                 mode='markers+lines')
             ],
@@ -120,28 +121,33 @@ def compare_gaussian_classifiers():
 
         # Create subplots
         fig = make_subplots(rows=2,
-                            cols=3,
+                            cols=2,
                             subplot_titles=[f"{m} <br><sup>Accuracy = {round(accuracy(y, preds[i]), 3)}</sup>"
                                             for i, m in enumerate(model_names)],
-                            horizontal_spacing=0.01,
-                            vertical_spacing=.03)
+                            horizontal_spacing=0.1,
+                            vertical_spacing=.03,
+                            )
 
         # Add traces for data-points setting symbols and colors
         for i, m in enumerate(models):
-            fig.add_traces([decision_surface(m.predict, lims[0], lims[1], showscale=False),
-                            go.Scatter(x=X[:, 0], y=X[:, 1], mode="markers", showlegend=False,
+            fig.add_traces([go.Scatter(x=X[:, 0], y=X[:, 1], mode="markers", showlegend=False,
                                        marker=dict(color=preds[i],
                                                    symbol=symbols[y],
                                                    colorscale=[custom[0], custom[-1]],
-                                                   line=dict(color="black", width=1))
-                                       )
+                                                   line=dict(color="black", width=1)),
+                                       ),
+                            decision_surface(m.predict, lims[0], lims[1], showscale=False)
+
                             ],
-                           rows=(i // 3) + 1, cols=(i % 3) + 1)
+                           rows=(i // 2) + 1, cols=(i % 2) + 1
+                           )
 
         fig.update_layout(
             title=rf"$\textbf{{Decision Boundaries Of Models - {title} {j + 1} Dataset}}$",
-            margin=dict(t=100)) \
-            .update_xaxes(visible=False).update_yaxes(visible=False)
+            margin=dict(t=100),
+            width=1200,
+            height=1000
+        )
 
         # fig.show()
 
@@ -162,25 +168,23 @@ def compare_gaussian_classifiers():
                         )
                     )
                 ],
-                    rows=(i // 3) + 1, cols=(i % 3) + 1
+                    rows=(i // 2) + 1, cols=(i % 2) + 1
                 )
 
         # Add ellipses depicting the covariances of the fitted Gaussians
         covs = np.empty(shape=(np.unique(y).shape[0], X.shape[1], X.shape[1]))
-        # covs = np.empty(shape=(np.unique(y).shape[0], X.shape[1] * X.shape[1])). \
-        #     reshape((np.unique(y).shape[0], X.shape[1], X.shape[1]))
         for l, k in enumerate(np.unique(y)):
             covs[l] = np.cov(X[y == k].T)
-        print(f"{title} {j + 1} covs = \n {np.round(covs, 3)}")
+        # print(f"{title} {j + 1} covs = \n {np.round(covs, 3)}")
 
         for i, m in enumerate(models):
             for mu_ind, mu in enumerate(m.mu_):
                 # mu = m.mu_[j]
-                # cov = np.cov(X[y==k])
+                # cov = np.cov(X[y==k].T)
                 fig.add_traces([
                     get_ellipse(mu, covs[mu_ind] if m == lda else np.diag(m.vars_[mu_ind]))
                 ],
-                    rows=(i // 3) + 1, cols=(i % 3) + 1
+                    rows=(i // 2) + 1, cols=(i % 2) + 1
                 )
 
         fig.show()
@@ -189,11 +193,12 @@ def compare_gaussian_classifiers():
 if __name__ == '__main__':
     np.random.seed(0)
     run_perceptron()
-    # compare_gaussian_classifiers()
+    compare_gaussian_classifiers()
+
     # X = np.array([[1, 1], [1, 2], [2, 3], [2, 4], [3, 3], [3, 4]])
     # y = np.array([ 0,  0,  1,  1,  1,  1])
     # gnb = GaussianNaiveBayes().fit(X, y)
-    # print(gnb.vars_[0])
+    # print(gnb.vars_[0,0])
     #
     # print(gnb.vars_)
-    print("done")
+    # print("done")
