@@ -124,9 +124,5 @@ class Perceptron(BaseEstimator):
             Performance under missclassification loss function
         """
         from ...metrics import misclassification_error
-        # def calc(x):
-        #     return misclassification_error(y, x)
         return misclassification_error(y, self.predict(X))
-        # return np.apply_along_axis(calc, axis=1, arr=self.predict(X)).sum()
-    # np.sum(np.apply_along_axis(misclassification_error, 0, [self.predict(X),y])
 
