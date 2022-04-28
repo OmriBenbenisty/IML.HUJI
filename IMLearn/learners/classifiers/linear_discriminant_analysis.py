@@ -47,9 +47,6 @@ class LDA(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        # _, y_t = np.unique(y, return_inverse=True)  # non-negative ints
-        # self.priors_ = np.bincount(y_t) / float(len(y))
-
         self.classes_ = np.unique(y)
         n_classes = self.classes_.shape[0]
         n_features = X.shape[1]
@@ -86,16 +83,6 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-
-        # coef_ = np.linalg.lstsq(self.cov_, self.mu_.T)[0].T
-        # intercept_ = -0.5 * np.diag(np.dot(self.mu_, coef_.T)) + np.log(
-        #     self.priors_)
-        # pred = np.zeros(X.shape[0])
-        # for i, c in enumerate(self.classes_):
-        #     pred[i] = np.dot(self.mu_[i] @ self.cov_, X) - \
-        #               np.dot(self.mu_[i] @ self.cov_, self.mu_[i])*0.5 +\
-        #               np.log(self.pi_[i])
-        # return pred
         pred = np.empty((self.classes_.shape[0], X.shape[0]))  # (n_classes, n_samples)
         #  self._a @ X + self._b    (n_features,n_classes) * (n_samples, n_features) + (n_classes, n_classes) ->
         #  self._a.T @ X.T + self._b    (n_classes,n_features) * (n_features,n_samples) + (n_classes, n_classes) ->
@@ -107,10 +94,6 @@ class LDA(BaseEstimator):
         pred = np.argmax(pred, axis=0)  # (n_samples)
         return np.fromiter(map(lambda y: self.classes_[y], pred),
                            dtype=type(self.classes_[0]))  # (n_samples)
-
-        # return np.fromiter(map(lambda y: self.classes_[y],
-        #                        np.argmax(self._a @ X + self._b, axis=1)),
-        #                    dtype=type(self.classes_[0]))
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -130,8 +113,6 @@ class LDA(BaseEstimator):
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
         prob = np.empty((self.classes_.shape[0], X.shape[0]))  # (n_classes, n_samples)
-        #  self._a @ X + self._b    (n_features,n_classes) * (n_samples, n_features) + (n_classes, n_classes) ->
-        #  self._a.T @ X.T + self._b    (n_classes,n_features) * (n_features,n_samples) + (n_classes, n_classes) ->
         for i in range(len(self.classes_)):
             mu_k = self.mu_[i]  # (n_features)
             det_cov = det(self.cov_)
