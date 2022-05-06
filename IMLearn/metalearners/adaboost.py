@@ -1,5 +1,5 @@
 import numpy as np
-from ...base import BaseEstimator
+from ..base import BaseEstimator
 from typing import Callable, NoReturn
 
 
@@ -48,7 +48,18 @@ class AdaBoost(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        m = X.shape[0]
+        self.D_ = np.ones(shape=m) / m
+        self.models_ = np.empty(shape=self.iterations_)
+        self.weights_ = np.empty(shape=self.iterations_)
+        for t in range(self.iterations_):
+            wl_t = self.wl_().fit(X, y)
+            self.models_[t] = wl_t
+            pred_t = wl_t.predict(X)
+            epsilon_t = np.sum(self.D_ * (pred_t != y).astype(int))
+            self.weights_[t] = .5 * np.log((1/epsilon_t) - 1)
+            self.D_ *= np.exp(-y * (self.weights_ * pred_t))
+            self.D_ /= np.sum(self.D_)
 
     def _predict(self, X):
         """
@@ -64,7 +75,7 @@ class AdaBoost(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        return self.partial_predict(X, self.iterations_)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -102,7 +113,17 @@ class AdaBoost(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        pred = np.zeros(shape=X.shape[0])
+        for t in range(T):
+            pred += self.weights_[t] * self.models_[t].predict(X)
+        return np.where(pred >= 0, 1, -1)
+        # def pred(estimator: BaseEstimator) -> np.ndarray:
+        #     return estimator.predict(X)
+        #
+        # predicted = np.ndarray(list(map(pred, self.models_)))  # (models * samples)
+        # return np.where(np.sum(np.einsum("i,ij->j", self.weights_, predicted), axis=0) >= 0, 1, -1)
+
+
 
     def partial_loss(self, X: np.ndarray, y: np.ndarray, T: int) -> float:
         """
