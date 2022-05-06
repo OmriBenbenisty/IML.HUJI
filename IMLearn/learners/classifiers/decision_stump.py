@@ -46,7 +46,7 @@ class DecisionStump(BaseEstimator):
         self.threshold_ = 0.0
         min_mse = 1.1
         X_T = X.T
-        for sign, j in product([-1, 1], X_T.shape[0]):
+        for sign, j in product([-1, 1], range(X_T.shape[0])):
             feature_threshold, feature_mse = \
                 self._find_threshold(X_T[j], y, sign)
             if feature_mse < min_mse:
@@ -110,15 +110,15 @@ class DecisionStump(BaseEstimator):
         """
         p = np.argsort(values)
         vals, label = values[p], labels[p]
-        signs = np.empty(shape=vals)
+        signs = np.empty(shape=vals.shape[0])
         signs.fill(sign)
         threshold = vals[0]
         min_mse = 1.1
         for i, val in enumerate(vals):
             # cur_mse = misclassification_error(np.where(label >= 0, 1, -1), signs)
-            cur_mse = (np.abs(label) * (np.where(label >= 0, 1, -1) != signs).astype(int))
+            cur_mse = np.sum((np.abs(label) * (np.where(label >= 0, 1, -1) != signs).astype(int)))
             if cur_mse < min_mse:
-                min_mse, threshold = cur_mse, vals[i]
+                min_mse, threshold = cur_mse, val
             signs[i] = -sign
         return threshold, min_mse
 
@@ -139,4 +139,4 @@ class DecisionStump(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        return misclassification_error(y, self.predict(X))
+        return misclassification_error(np.where(y >= 0, 1, -1), self.predict(X))
