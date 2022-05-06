@@ -109,9 +109,6 @@ def compare_gaussian_classifiers():
         lda = LDA().fit(X, y)
         gnb = GaussianNaiveBayes().fit(X, y)
         preds = [gnb.predict(X), lda.predict(X)]
-        print(np.round(lda.likelihood(X), 4))
-        print("\n\n\n")
-        continue
 
         # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
         # on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
@@ -195,7 +192,7 @@ def compare_gaussian_classifiers():
 
 if __name__ == '__main__':
     np.random.seed(0)
-    # run_perceptron()
+    run_perceptron()
     compare_gaussian_classifiers()
 
     # X = np.array([[1, 1], [1, 2], [2, 3], [2, 4], [3, 3], [3, 4]])
