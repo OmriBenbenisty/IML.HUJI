@@ -5,11 +5,13 @@ import plotly.io
 
 from IMLearn.metalearners.adaboost import AdaBoost
 from IMLearn.learners.classifiers import DecisionStump
+from IMLearn.metrics import accuracy
 from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 plotly.io.renderers.default = 'browser'
+import pickle
 
 
 def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -47,8 +49,20 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     (train_X, train_y), (test_X, test_y) = generate_data(train_size, noise), generate_data(test_size, noise)
 
     # Question 1: Train- and test errors of AdaBoost in noiseless case
-    print("Fitting.......")
+    # print("Fitting.......")
     adb = AdaBoost(DecisionStump, n_learners).fit(train_X, train_y)
+
+    # save it
+    # with open(f'adb_{train_size}_{test_size}_{noise}noise.pickle', 'wb') as file:
+    #     pickle.dump(adb, file)
+    # print("saved")
+    # return
+
+    # print("Loading...")
+    # with open(f'adb_{train_size}_{test_size}_{noise}noise.pickle', 'rb') as file2:
+    #     adb = pickle.load(file2)
+
+    # adb = AdaBoost(DecisionStump, 1)
 
     print("Plotting.......")
     go.Figure(
@@ -67,11 +81,11 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
             )
         ],
         layout=go.Layout(
-            title="Loss as Function of Num of Learners",
+            title=f"Loss as Function of Num of Learners over Data with {noise} noise",
             xaxis_title={'text': "$\\text{Num of Learners}$"},
             yaxis_title={'text': "$\\text{Misclassification Loss}$"}
         )
-    ).show()
+    )
 
     # Question 2: Plotting decision surfaces
     T = [5, 50, 100, 250]
@@ -86,20 +100,21 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
                         subplot_titles=[f"Decision Boundary for Ensemble of Size {m}"
                                         for i, m in enumerate(T)],
                         horizontal_spacing=0.1,
-                        vertical_spacing=.03,
+                        vertical_spacing=.05,
                         )
 
     # Add traces for data-points setting symbols and colors
     for i, m in enumerate(T):
         fig.add_traces([go.Scatter(
-            x=train_X[:, 0],
-            y=train_X[:, 1],
+            x=test_X[:, 0],
+            y=test_X[:, 1],
             mode="markers",
             showlegend=False,
             marker=dict(
-                color=preds[i],
-                symbol=symbols[train_y.astype(int)],
-                colorscale=[custom[0], custom[-1]],
+                color=test_y,
+                # symbol=symbols[train_y.astype(int)],
+                symbol='diamond',
+                # colorscale=[custom[0], custom[-1]],
                 line=dict(color="black", width=1)),
         ),
             decision_surface(lambda x: adb.partial_predict(x, m), lims[0], lims[1], showscale=False)
@@ -109,21 +124,91 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
         )
 
     fig.update_layout(
-        title=rf"$\textbf{{Decision Boundaries for Different Ensemble Size$",
-        # margin=dict(t=100),
+        title=f"Decision Boundaries for Different Ensemble Size <br>",
+        margin=dict(t=100),
         width=1200,
         height=1000
     )
 
-    fig.show()
+    # fig.show()
 
     # Question 3: Decision surface of best performing ensemble
-    # raise NotImplementedError()
+
+    best_ensemble = np.argmin(np.array(
+        [adb.partial_loss(X=test_X, y=test_y, T=t)
+         for t in range(1, 251)])) + 1
+
+    go.Figure(
+        data=[
+            go.Scatter(
+                x=test_X[:, 0],
+                y=test_X[:, 1],
+                mode="markers",
+                showlegend=False,
+                marker=dict(
+                    color=test_y,
+                    # symbol=symbols[train_y.astype(int)],
+                    symbol='diamond',
+                    # colorscale=[custom[0], custom[-1]],
+                    line=dict(color="black", width=1)),
+            ),
+            decision_surface(
+                lambda x: adb.partial_predict(x, best_ensemble),
+                lims[0], lims[1], showscale=False
+            )
+        ]
+    ).update_layout(
+        title=f"Decision Boundaries for Ensemble of Size {best_ensemble}<br>"
+              f"<sup> With Accuracy of: "
+              f"{accuracy(test_y, adb.partial_predict(test_X, best_ensemble))}"
+              f"</sup>",
+        margin=dict(t=100),
+        width=1200,
+        height=1000
+    )
 
     # Question 4: Decision surface with weighted samples
-    # raise NotImplementedError()
+
+    weights = adb.D_ * 50 / np.max(adb.D_)
+
+    go.Figure(
+        data=[
+            go.Scatter(
+                x=train_X[:, 0],
+                y=train_X[:, 1],
+                mode="markers",
+                showlegend=False,
+                marker=dict(
+                    # color=proportional_y + np.abs(np.min(proportional_y)),
+                    color=weights,
+                    symbol=symbols[train_y.astype(int)],
+                    # symbol='diamond',
+                    # colorscale=[custom[0], custom[-1]],
+                    line=dict(color="black", width=1),
+                    # size=proportional_y + np.abs(np.min(proportional_y))
+                    size=weights
+                )
+            ).update(),
+            decision_surface(
+                adb.predict,
+                lims[0], lims[1], showscale=False
+            )
+        ]
+    ).update_layout(
+        title=f"Decision Boundaries for Data with {noise} noise <br>"
+              f"With Training Set Point Size & Color Proportional To It’s Weight<br>"
+              f"<sup>   x    - True label is blue</sup><br>"
+              f"<sup>diamond - True label is red</sup>",
+        margin=dict(t=120),
+        width=1000,
+        height=1000,
+
+    ).show()
 
 
 if __name__ == '__main__':
     np.random.seed(0)
-    fit_and_evaluate_adaboost(noise=0, train_size=5000)
+    fit_and_evaluate_adaboost(noise=0)
+    # fit_and_evaluate_adaboost(noise=0.4)
+
+    # print(np.sum(np.array([True, False])))

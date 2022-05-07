@@ -146,7 +146,7 @@ class AdaBoost(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        if T > self.iterations_:
-            raise ValueError("T is bigger than num of fitted model")
+        if T > self.iterations_ or T <= 0:
+            raise ValueError("T must be in range [1, number of fitted models].")
         return misclassification_error(np.where(y >= 0, 1, -1),
                                        self.partial_predict(X, T))
