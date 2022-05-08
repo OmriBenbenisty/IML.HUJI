@@ -114,17 +114,12 @@ class AdaBoost(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        if T > self.iterations_:
-            raise ValueError("T is bigger than num of fitted model")
+        if T > self.iterations_ or T <= 0:
+            raise ValueError("T must be in range [1, number of fitted models].")
         pred = np.zeros(shape=X.shape[0])
         for t in range(T):
             pred += self.weights_[t] * self.models_[t].predict(X)
         return np.where(pred >= 0, 1, -1)
-        # def pred(estimator: BaseEstimator) -> np.ndarray:
-        #     return estimator.predict(X)
-        #
-        # predicted = np.ndarray(list(map(pred, self.models_)))  # (models * samples)
-        # return np.where(np.sum(np.einsum("i,ij->j", self.weights_, predicted), axis=0) >= 0, 1, -1)
 
     def partial_loss(self, X: np.ndarray, y: np.ndarray, T: int) -> float:
         """

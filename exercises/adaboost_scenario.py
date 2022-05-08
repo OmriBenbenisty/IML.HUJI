@@ -11,7 +11,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 plotly.io.renderers.default = 'browser'
-import pickle
 
 
 def generate_data(n: int, noise_ratio: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -62,9 +61,8 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     # with open(f'adb_{train_size}_{test_size}_{noise}noise.pickle', 'rb') as file2:
     #     adb = pickle.load(file2)
 
-    # adb = AdaBoost(DecisionStump, 1)
 
-    print("Plotting.......")
+    # print("Plotting.......")
     go.Figure(
         data=[
             go.Scatter(
@@ -91,9 +89,8 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     T = [5, 50, 100, 250]
     lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T + np.array([-.1, .1])
 
-    preds = [adb.partial_predict(train_X, t) for t in T]
+    # preds = [adb.partial_predict(train_X, t) for t in T]
     symbols = np.array(["circle", "x", "diamond"])
-    title = ""
 
     fig = make_subplots(rows=2,
                         cols=2,
@@ -112,9 +109,7 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
             showlegend=False,
             marker=dict(
                 color=test_y,
-                # symbol=symbols[train_y.astype(int)],
                 symbol='diamond',
-                # colorscale=[custom[0], custom[-1]],
                 line=dict(color="black", width=1)),
         ),
             decision_surface(lambda x: adb.partial_predict(x, m), lims[0], lims[1], showscale=False)
@@ -147,9 +142,7 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
                 showlegend=False,
                 marker=dict(
                     color=test_y,
-                    # symbol=symbols[train_y.astype(int)],
                     symbol='diamond',
-                    # colorscale=[custom[0], custom[-1]],
                     line=dict(color="black", width=1)),
             ),
             decision_surface(
@@ -179,13 +172,9 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
                 mode="markers",
                 showlegend=False,
                 marker=dict(
-                    # color=proportional_y + np.abs(np.min(proportional_y)),
                     color=weights,
                     symbol=symbols[train_y.astype(int)],
-                    # symbol='diamond',
-                    # colorscale=[custom[0], custom[-1]],
                     line=dict(color="black", width=1),
-                    # size=proportional_y + np.abs(np.min(proportional_y))
                     size=weights
                 )
             ).update(),
@@ -209,6 +198,4 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
 if __name__ == '__main__':
     np.random.seed(0)
     fit_and_evaluate_adaboost(noise=0)
-    # fit_and_evaluate_adaboost(noise=0.4)
-
-    # print(np.sum(np.array([True, False])))
+    fit_and_evaluate_adaboost(noise=0.4)

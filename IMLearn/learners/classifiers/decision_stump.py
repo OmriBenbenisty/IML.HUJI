@@ -76,52 +76,6 @@ class DecisionStump(BaseEstimator):
         to or above the threshold are predicted as `sign`
         """
         return np.where(X[:, self.j_] < self.threshold_, -self.sign_, self.sign_)
-        # return ((X_T_j < self.threshold_).astype(int) - .5) * 2 * self.sign_
-
-    # def _find_threshold(self, values: np.ndarray, labels: np.ndarray, sign: int) -> Tuple[float, float]:
-    #     """
-    #     Given a feature vector and labels, find a threshold by which to perform a split
-    #     The threshold is found according to the value minimizing the misclassification
-    #     error along this feature
-    #
-    #     Parameters
-    #     ----------
-    #     values: ndarray of shape (n_samples,)
-    #         A feature vector to find a splitting threshold for
-    #
-    #     labels: ndarray of shape (n_samples,)
-    #         The labels to compare against
-    #
-    #     sign: int
-    #         Predicted label assigned to values equal to or above threshold
-    #
-    #     Returns
-    #     -------
-    #     thr: float
-    #         Threshold by which to perform split
-    #
-    #     thr_err: float between 0 and 1
-    #         Misclassificaiton error of returned threshold
-    #
-    #     Notes
-    #     -----
-    #     For every tested threshold, values strictly below threshold are predicted as `-sign` whereas values
-    #     which equal to or above the threshold are predicted as `sign`
-    #     """
-    #     p = np.argsort(values)
-    #     vals, label = values[p], labels[p]
-    #     signs = np.empty(shape=vals.shape[0])
-    #     signs.fill(sign)
-    #     threshold = vals[0]
-    #     min_mse = 1.1
-    #     for i, val in enumerate(vals):
-    #         # cur_mse = misclassification_error(np.where(label >= 0, 1, -1), signs)
-    #         cur_mse = np.sum((np.abs(label) * (np.where(label >= 0, 1, -1) != signs).astype(int)))
-    #         if cur_mse < min_mse:
-    #             min_mse, threshold = cur_mse, val
-    #         signs[i] = -sign
-    #     return threshold, min_mse
-
 
     def _find_threshold(self, values: np.ndarray, labels: np.ndarray, sign: int) -> Tuple[float, float]:
         """
