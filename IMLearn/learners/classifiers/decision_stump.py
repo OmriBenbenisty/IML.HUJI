@@ -156,9 +156,9 @@ class DecisionStump(BaseEstimator):
         p = np.argsort(values)
         vals, label = values[p], labels[p]
         min_loss = np.sum((np.where(label >= 0, 1, -1) != sign).astype(int) * np.abs(label))
-        mses = min_loss - np.cumsum(label * sign)
+        mses = min_loss - np.cumsum((label * sign)[::-1])[::-1]
         min_ind = np.argmin(mses)
-        signs = np.hstack((sign * np.ones(min_ind), -sign * np.ones(vals.shape[0] - min_ind)))
+        signs = np.hstack((-sign * np.ones(min_ind), sign * np.ones(vals.shape[0] - min_ind)))
         min_mse = float(np.sum(np.abs(label) * (np.where(label >= 0, 1, -1) != signs).astype(int)))
         return vals[min_ind], min_mse
 

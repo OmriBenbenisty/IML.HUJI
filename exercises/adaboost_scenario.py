@@ -85,7 +85,7 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
             xaxis_title={'text': "$\\text{Num of Learners}$"},
             yaxis_title={'text': "$\\text{Misclassification Loss}$"}
         )
-    )
+    ).show()
 
     # Question 2: Plotting decision surfaces
     T = [5, 50, 100, 250]
@@ -130,7 +130,7 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
         height=1000
     )
 
-    # fig.show()
+    fig.show()
 
     # Question 3: Decision surface of best performing ensemble
 
@@ -165,11 +165,11 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
         margin=dict(t=100),
         width=1200,
         height=1000
-    )
+    ).show()
 
     # Question 4: Decision surface with weighted samples
 
-    weights = adb.D_ * 50 / np.max(adb.D_)
+    weights = adb.D_ * 10 / np.max(adb.D_)
 
     go.Figure(
         data=[
