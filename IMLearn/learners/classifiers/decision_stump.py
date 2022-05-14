@@ -114,7 +114,8 @@ class DecisionStump(BaseEstimator):
         min_ind = np.argmin(mses)
         signs = np.hstack((-sign * np.ones(min_ind), sign * np.ones(vals.shape[0] - min_ind)))
         min_mse = float(np.sum(np.abs(label) * (np.where(label >= 0, 1, -1) != signs).astype(int)))
-        return vals[min_ind], min_mse
+        threshold = np.NINF if min_ind == 0 else vals[min_ind]  # to avoid red edges
+        return threshold, min_mse
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
