@@ -133,4 +133,4 @@ class DecisionStump(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        return misclassification_error(np.where(y >= 0, 1, -1), self.predict(X))
+        return float(np.sum(np.abs(y) * (np.where(y >= 0, 1, -1) != self.predict(X)).astype(int)))

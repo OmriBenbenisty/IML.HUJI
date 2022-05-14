@@ -198,4 +198,4 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
 if __name__ == '__main__':
     np.random.seed(0)
     fit_and_evaluate_adaboost(noise=0)
-    fit_and_evaluate_adaboost(noise=0.4)
+    # fit_and_evaluate_adaboost(noise=0.4)

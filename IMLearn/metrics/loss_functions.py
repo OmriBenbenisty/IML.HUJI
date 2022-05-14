@@ -36,9 +36,11 @@ def misclassification_error(y_true: np.ndarray, y_pred: np.ndarray, normalize: b
     -------
     Misclassification of given predictions
     """
-    prod = y_true * y_pred
-    return np.sum((prod < 0).astype(int)) / prod.shape[0] if normalize\
-        else np.sum((prod < 0).astype(int))
+    return np.sum(y_true != y_pred) / y_true.shape[0] if normalize\
+        else np.sum(y_true != y_pred)
+    # prod = y_true * y_pred
+    # return np.sum((prod < 0).astype(int)) / prod.shape[0] if normalize\
+    #     else np.sum((prod < 0).astype(int))
 
     # return np.linalg.norm(y_true - y_pred) / y_true.shape[0] if normalize \
     #     else np.linalg.norm(y_true - y_pred)
