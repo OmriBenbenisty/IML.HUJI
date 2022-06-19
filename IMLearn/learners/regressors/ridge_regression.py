@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import NoReturn
-from ...base import BaseEstimator
+from IMLearn.base import BaseEstimator
 import numpy as np
-from ...metrics import mean_square_error
+from IMLearn.metrics import mean_square_error
 
 
 class RidgeRegression(BaseEstimator):
