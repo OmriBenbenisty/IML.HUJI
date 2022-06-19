@@ -147,14 +147,12 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
     """
     # Question 6 - Load diabetes dataset and split into training and testing portions
     X, y = datasets.load_diabetes(return_X_y=True)
-    train_size = 50
-    train_X, train_y, test_X, test_y = X[:train_size], y[:train_size], \
-                                       X[train_size:], y[train_size:]
+    train_X, train_y, test_X, test_y = X[:n_samples], y[:n_samples], \
+                                       X[n_samples:], y[n_samples:]
 
     # Question 7 - Perform CV for different values of the regularization parameter for Ridge and Lasso regressions
     lambda_min = 0.001
     lambda_max = 3
-    n_evaluations = 500
     lambda_range = np.linspace(lambda_min, lambda_max, n_evaluations)
 
     train_er_ind = 0
@@ -193,6 +191,9 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
             cols=i % 2 + 1
         )
 
+    fig.update_layout(xaxis_title=r"$\lambda$",
+                      yaxis_title=r"$\text{Loss}$", )
+
     fig.show()
 
     best_lasso = lambda_range[np.argmin(lasso_scores[:, val_er_ind])]
@@ -206,11 +207,19 @@ def select_regularization_parameter(n_samples: int = 50, n_evaluations: int = 50
 
     # Question 8 - Compare best Ridge model, best Lasso model and Least Squares model
 
+    lasso = LassoDummy(lam=best_lasso).fit(train_X, train_y)
+    ridge = RidgeRegression(lam=best_ridge).fit(train_X, train_y)
+    lin = LinearRegression().fit(train_X, train_y)
+    print(
+        f"Lasso Loss over Test: {lasso.loss(test_X, test_y)}\n" +
+        f"Ridge Loss over Test {ridge.loss(test_X, test_y)}\n"+
+        f"Least Squares Loss over Test {lin.loss(test_X, test_y)}"
+    )
+
 
 if __name__ == '__main__':
     np.random.seed(0)
-    print("start")
-    # select_polynomial_degree()
-    # select_polynomial_degree(noise=0)
-    # select_polynomial_degree(n_samples=1500, noise=10)
+    select_polynomial_degree()
+    select_polynomial_degree(noise=0)
+    select_polynomial_degree(n_samples=1500, noise=10)
     select_regularization_parameter()

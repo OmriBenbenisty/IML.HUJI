@@ -34,7 +34,6 @@ class RidgeRegression(BaseEstimator):
             `LinearRegression.fit` function.
         """
 
-
         """
         Initialize a ridge regression model
         :param lam: scalar value of regularization parameter
@@ -63,13 +62,11 @@ class RidgeRegression(BaseEstimator):
         X_ = np.insert(X, 0, 1, axis=1) if self.include_intercept_ else X
         U, SIGMA, Vt = np.linalg.svd(X_, full_matrices=False)
         idx = SIGMA > 1e-15
-        # SIGMA_lam = SIGMA[idx][:, np.newaxis]
         UTy = np.dot(U.T, y)
-        SIGMA_LAM = np.zeros((SIGMA.size), dtype=X_.dtype)
+        SIGMA_LAM = np.zeros((SIGMA.shape[0]), dtype=X_.dtype)
         SIGMA_LAM[idx] = SIGMA / (SIGMA ** 2 + self.lam_)
         SIGMA_LAM_UTy = SIGMA_LAM * UTy
         self.coefs_ = np.dot(Vt.T, SIGMA_LAM_UTy)
-
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
