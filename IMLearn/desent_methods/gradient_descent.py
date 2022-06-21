@@ -39,6 +39,7 @@ class GradientDescent:
         Callable function receives as input any argument relevant for the current GD iteration. Arguments
         are specified in the `GradientDescent.fit` function
     """
+
     def __init__(self,
                  learning_rate: BaseLR = FixedLR(1e-3),
                  tol: float = 1e-5,
@@ -76,7 +77,7 @@ class GradientDescent:
         self.max_iter_ = max_iter
         self.callback_ = callback
 
-    def fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray):
+    def fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         """
         Optimize module using Gradient Descent iterations over given input samples and responses
 
@@ -119,4 +120,39 @@ class GradientDescent:
                 Euclidean norm of w^(t)-w^(t-1)
 
         """
-        raise NotImplementedError()
+        x_t = np.random.random(size=f.shape[0])
+        x_t_1 = np.zeros(shape=f.shape)
+        x_ts = x_t
+        best_x_t = np.zeros(shape=f.shape)
+        best_out = np.inf
+        t = 1
+        while t <= self.max_iter_:
+            delta = np.linalg.norm(x_t - x_t_1)
+            if delta < self.tol_:
+                break
+            f.weights(x_t)  # update weights
+            cur_out = f.compute_output(X=X, y=y)
+            if cur_out < best_out:
+                best_out = cur_out
+                best_x_t = x_t
+            eta = self.learning_rate_.lr_step(t=t + 1)
+            grad = f.compute_jacobian(X=X, y=y)
+            x_t = x_t - eta * grad  # compute x_t
+            x_ts += x_t
+            self.callback_(self,
+                           {'solver': self,
+                            'weights': x_t,
+                            'val': cur_out,
+                            'grad': grad,
+                            't': t,
+                            'eta': eta,
+                            'delta': delta
+                            })
+            x_t_1 = x_t
+            t += 1
+        if self.out_type_ == 'last':
+            return x_t
+        if self.out_type_ == 'best':
+            return best_x_t
+        if self.out_type_ == 'average':
+            return x_ts / t
