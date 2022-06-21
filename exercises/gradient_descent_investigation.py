@@ -7,9 +7,15 @@ from IMLearn.desent_methods import GradientDescent, FixedLR, ExponentialLR
 from IMLearn.desent_methods.modules import L1, L2
 from IMLearn.learners.classifiers.logistic_regression import LogisticRegression
 from IMLearn.utils import split_train_test
+from plotly.subplots import make_subplots
 
 import plotly.graph_objects as go
+import plotly as plt
 
+plt.io.renderers.default = 'browser'
+
+
+titles = ["L1", "L2"]
 
 def plot_descent_path(module: Type[BaseModule],
                       descent_path: np.ndarray,
@@ -46,12 +52,14 @@ def plot_descent_path(module: Type[BaseModule],
     fig = plot_descent_path(IMLearn.desent_methods.modules.L1, np.ndarray([[1,1],[0,0]]))
     fig.show()
     """
+
     def predict_(w):
         return np.array([module(weights=wi).compute_output() for wi in w])
 
     from utils import decision_surface
     return go.Figure([decision_surface(predict_, xrange=xrange, yrange=yrange, density=70, showscale=False),
-                      go.Scatter(x=descent_path[:, 0], y=descent_path[:, 1], mode="markers+lines", marker_color="black")],
+                      go.Scatter(x=descent_path[:, 0], y=descent_path[:, 1], mode="markers+lines",
+                                 marker_color="black")],
                      layout=go.Layout(xaxis=dict(range=xrange),
                                       yaxis=dict(range=yrange),
                                       title=f"GD Descent Path {title}"))
@@ -73,25 +81,62 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
     weights: List[np.ndarray]
         Recorded parameters
     """
-    raise NotImplementedError()
+    values = []
+    weights = []
+
+    def callback(**kwargs) -> None:
+        values.append(kwargs['val'])
+        weights.append(kwargs['weights'])
+
+    return callback, values, weights
 
 
 def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                  etas: Tuple[float] = (1, .1, .01, .001)):
-    raise NotImplementedError()
+
+    for j, m in enumerate([L1, L2]):
+        fig = go.Figure()
+        for i, eta in enumerate(etas):
+            callback, values, weights = get_gd_state_recorder_callback()
+            module = m(weights=init.copy())
+            weights.append(init.copy())
+            gd = GradientDescent(callback=callback, learning_rate=FixedLR(eta)).fit(module, None, None)
+            plot_descent_path(module=m,
+                              descent_path=np.array(weights),
+                              title=f"Descent path for {titles[j]} norm with eta = {eta}").show()
+            fig.add_traces(data=[go.Scatter(x=np.arange(len(values)), y=values, name=eta)])
+            # print(f"{titles[j]}, {eta},min = {round(min(values), 4)}")
+        fig.update_layout(
+            title=f"{titles[j]} norm as a function of the GD iteration"
+        ).show()
 
 
 def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                     eta: float = .1,
                                     gammas: Tuple[float] = (.9, .95, .99, 1)):
     # Optimize the L1 objective using different decay-rate values of the exponentially decaying learning rate
-    raise NotImplementedError()
+    fig = go.Figure()
+    for i, gamma in enumerate(gammas):
+        callback, values, weights = get_gd_state_recorder_callback()
+        module = L1(weights=init.copy())
+        weights.append(init.copy())
+        gd = GradientDescent(callback=callback, learning_rate=ExponentialLR(eta, gamma)).fit(module, None, None)
+        plot_descent_path(module=L1,
+                          descent_path=np.array(weights),
+                          title=f"Descent path for L1 norm with eta = {eta}, gamma = {gamma}").show()
+        fig.add_traces(data=[go.Scatter(x=np.arange(len(values)), y=values, name=gamma, mode='markers')])
+
+        print(f"L1, eta={eta},gamma={gamma} ,min = {round(min(values), 4)}")
+
 
     # Plot algorithm's convergence for the different values of gamma
-    raise NotImplementedError()
+    fig.update_layout(
+        title=f"L1 norm as a function of the GD iteration with Exponential Decay eta = {eta}",
+        xaxis_title="Iterations",
+        yaxis_title="L1 Norm"
+    ).show()
 
     # Plot descent path for gamma=0.95
-    raise NotImplementedError()
 
 
 def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8) -> \
@@ -138,15 +183,16 @@ def fit_logistic_regression():
     raise NotImplementedError()
 
 
-# if __name__ == '__main__':
-#     np.random.seed(0)
-#     compare_fixed_learning_rates()
-#     compare_exponential_decay_rates()
-#     fit_logistic_regression()
-
 if __name__ == '__main__':
-    from IMLearn.desent_methods.modules import L2
-    bl = L2()
-    grad = GradientDescent()
-    grad.fit(X=None,y=None, f=bl)
+    np.random.seed(0)
+    # compare_fixed_learning_rates()
+    compare_exponential_decay_rates()
+    # fit_logistic_regression()
     print("Done")
+
+# if __name__ == '__main__':
+#     from IMLearn.desent_methods.modules import L2
+#
+#     bl = L2()
+#     grad = GradientDescent()
+#     grad.fit(X=None, y=None, f=bl)

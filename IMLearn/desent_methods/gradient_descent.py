@@ -120,38 +120,35 @@ class GradientDescent:
                 Euclidean norm of w^(t)-w^(t-1)
 
         """
-        x_t = np.random.random(size=f.shape[0])
-        x_t_1 = np.zeros(shape=f.shape)
-        x_ts = x_t
+        x_ts = f.weights
         best_x_t = np.zeros(shape=f.shape)
         best_out = np.inf
-        t = 1
+        t = 0
         while t <= self.max_iter_:
-            delta = np.linalg.norm(x_t - x_t_1)
-            if delta < self.tol_:
-                break
-            f.weights(x_t)  # update weights
+            eta = self.learning_rate_.lr_step(t=t+1)
+            grad = f.compute_jacobian(X=X, y=y)
+            x_t = f.weights - eta * grad  # update weights
+            delta = np.linalg.norm(x_t - f.weights)
+            f.weights = x_t
             cur_out = f.compute_output(X=X, y=y)
             if cur_out < best_out:
                 best_out = cur_out
-                best_x_t = x_t
-            eta = self.learning_rate_.lr_step(t=t + 1)
-            grad = f.compute_jacobian(X=X, y=y)
-            x_t = x_t - eta * grad  # compute x_t
-            x_ts += x_t
-            self.callback_(self,
-                           {'solver': self,
-                            'weights': x_t,
-                            'val': cur_out,
-                            'grad': grad,
-                            't': t,
-                            'eta': eta,
-                            'delta': delta
-                            })
-            x_t_1 = x_t
+                best_x_t = f.weights
+            self.callback_(solver=self,
+                           weights=f.weights,
+                           val=cur_out,
+                           grad=grad,
+                           t=t,
+                           eta=eta,
+                           delta=delta
+                           )
+            x_ts += f.weights
             t += 1
+            if delta < self.tol_:
+                break
+
         if self.out_type_ == 'last':
-            return x_t
+            return f.weights
         if self.out_type_ == 'best':
             return best_x_t
         if self.out_type_ == 'average':
