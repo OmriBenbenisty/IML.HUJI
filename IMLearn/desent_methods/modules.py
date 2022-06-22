@@ -1,5 +1,5 @@
 import numpy as np
-from IMLearn import BaseModule
+from IMLearn.base import BaseModule
 
 
 class L2(BaseModule):
@@ -8,6 +8,7 @@ class L2(BaseModule):
 
     Represents the function: f(w)=||w||^2_2
     """
+
     def __init__(self, weights: np.ndarray = None):
         """
         Initialize a module instance
@@ -103,6 +104,7 @@ class LogisticModule(BaseModule):
 
     Represents the function: f(w) = - (1/m) sum_i^m[y*<x_i,w> - log(1+exp(<x_i,w>))]
     """
+
     def __init__(self, weights: np.ndarray = None):
         """
         Initialize a logistic regression module instance
@@ -131,7 +133,12 @@ class LogisticModule(BaseModule):
         output: ndarray of shape (1,)
             Value of function at point self.weights
         """
-        raise NotImplementedError()
+
+        # (1/X.shape[0]) sum_i^m[y*<x_i,w> - log(1+exp(<x_i,w>))]
+        # (y @ (X * self.weights).T)  # ((n_samples, 1) @ ((n_samples, n_features) * (n_features, 1)).T)
+        X_w = X @ self.weights
+        lg = np.log(1 + np.exp(X_w))
+        return -np.mean((y * X_w) - lg)
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -150,8 +157,10 @@ class LogisticModule(BaseModule):
         output: ndarray of shape (n_features,)
             Derivative of function with respect to self.weights at point self.weights
         """
-        raise NotImplementedError()
-
+        X_w = X @ self.weights
+        exp_X_w = np.exp(X_w)
+        exp_X_w /= 1 + exp_X_w
+        return - np.mean(X * (y - exp_X_w)[:, None], axis=0)
 
 
 class RegularizedModule(BaseModule):
@@ -161,6 +170,7 @@ class RegularizedModule(BaseModule):
     for F(w) being some fidelity function, R(w) some regularization function and lambda
     the regularization parameter
     """
+
     def __init__(self,
                  fidelity_module: BaseModule,
                  regularization_module: BaseModule,
@@ -192,7 +202,11 @@ class RegularizedModule(BaseModule):
         self.include_intercept_ = include_intercept
 
         if weights is not None:
-            self.weights(weights)
+            self.fidelity_module_.weights_ = weights
+            if self.include_intercept_:
+                self.regularization_module_.weights_ = weights[1:]
+                return
+            self.regularization_module_.weights_ = weights
 
     def compute_output(self, **kwargs) -> np.ndarray:
         """
@@ -208,7 +222,9 @@ class RegularizedModule(BaseModule):
         output: ndarray of shape (1,)
             Value of function at point self.weights
         """
-        raise NotImplementedError()
+        fid = self.fidelity_module_.compute_output(**kwargs)
+        reg = self.regularization_module_.compute_output(**kwargs)
+        return fid + self.lam_ * reg
 
     def compute_jacobian(self, **kwargs) -> np.ndarray:
         """
@@ -224,7 +240,11 @@ class RegularizedModule(BaseModule):
         output: ndarray of shape (n_in,)
             Derivative with respect to self.weights at point self.weights
         """
-        raise NotImplementedError()
+        reg = self.regularization_module_.compute_jacobian(**kwargs)
+        if self.include_intercept_:
+            reg = np.insert(reg, 0, 0)
+        fid = self.fidelity_module_.compute_jacobian(**kwargs)
+        return fid + self.lam_ * reg
 
     @property
     def weights(self):
@@ -235,7 +255,7 @@ class RegularizedModule(BaseModule):
         -------
         weights: ndarray of shape (n_in, n_out)
         """
-        raise NotImplementedError()
+        return self.fidelity_module_.weights
 
     @weights.setter
     def weights(self, weights: np.ndarray) -> None:
@@ -250,4 +270,8 @@ class RegularizedModule(BaseModule):
         weights: ndarray of shape (n_in, n_out)
             Weights to set for module
         """
-        raise NotImplementedError()
+        self.fidelity_module_.weights_ = weights
+        if self.include_intercept_:
+            self.regularization_module_.weights_ = weights[1:]
+            return
+        self.regularization_module_.weights_ = weights
