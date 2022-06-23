@@ -268,14 +268,8 @@ def fit_logistic_regression():
 
 if __name__ == '__main__':
     np.random.seed(0)
-    # compare_fixed_learning_rates()
-    # compare_exponential_decay_rates()
+    compare_fixed_learning_rates()
+    compare_exponential_decay_rates()
     fit_logistic_regression()
     print("Done")
 
-# if __name__ == '__main__':
-#     from IMLearn.desent_methods.modules import L2
-#
-#     bl = L2()
-#     grad = GradientDescent()
-#     grad.fit(X=None, y=None, f=bl)
