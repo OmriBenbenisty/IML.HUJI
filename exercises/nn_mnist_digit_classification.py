@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import gzip
-from typing import Tuple
+from typing import Tuple, Callable, List
 
 from IMLearn.metrics.loss_functions import accuracy
 from IMLearn.learners.neural_networks.modules import FullyConnectedLayer, ReLU, CrossEntropyLoss, softmax
@@ -76,6 +76,17 @@ def plot_images_grid(images: np.ndarray, title: str = ""):
         .update_yaxes(showticklabels=False)
 
 
+def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarray], List[np.ndarray]]:
+    values = []
+    deltas = []
+
+    def callback(**kwargs) -> None:
+        values.append(kwargs['val'])
+        deltas.append(kwargs['delta'])
+
+    return callback, values, deltas
+
+
 if __name__ == '__main__':
     train_X, train_y, test_X, test_y = load_mnist()
     (n_samples, n_features), n_classes = train_X.shape, 10
@@ -84,7 +95,23 @@ if __name__ == '__main__':
     # Question 5+6+7: Network with ReLU activations using SGD + recording convergence              #
     # ---------------------------------------------------------------------------------------------#
     # Initialize, fit and test network
-    raise NotImplementedError()
+
+    callback, values, deltas = get_gd_state_recorder_callback()
+
+
+    nn = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=64, activation=ReLU()),
+            FullyConnectedLayer(input_dim=64, output_dim=64, activation=ReLU()),
+            FullyConnectedLayer(input_dim=64, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=StochasticGradientDescent(
+            learning_rate=FixedLR(base_lr=0.1),
+            max_iter=10000,
+            batch_size=256,
+            callback=callback)
+    ).fit(train_X, train_y)
 
     # Plotting convergence process
     raise NotImplementedError()

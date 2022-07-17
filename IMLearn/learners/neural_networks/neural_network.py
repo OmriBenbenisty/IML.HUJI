@@ -40,7 +40,10 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.compute_output(X, y)
+        self.compute_jacobian(X,y)
+        self.solver_.fit()
+
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -54,7 +57,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         responses : ndarray of shape (n_samples, )
             Predicted labels of given samples
         """
-        raise NotImplementedError()
+        preds = self.compute_prediction(X)
+        return np.apply_along_axis(np.max, axis=1, arr=preds)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """

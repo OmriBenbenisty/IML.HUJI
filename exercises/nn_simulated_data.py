@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Tuple, List
+from typing import Tuple, List, Callable
 from IMLearn.metrics.loss_functions import accuracy
 from IMLearn.learners.neural_networks.modules import FullyConnectedLayer, ReLU, CrossEntropyLoss
 from IMLearn.learners.neural_networks.neural_network import NeuralNetwork
@@ -11,6 +11,7 @@ from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
+
 pio.templates.default = "simple_white"
 
 
@@ -43,7 +44,7 @@ def generate_nonlinear_data(
     test_y : ndarray of shape (floor((1-train_proportion) * n_samples), )
         Responses of test samples
     """
-    X, y = np.zeros((samples_per_class*n_classes, n_features)), np.zeros(samples_per_class*n_classes, dtype='uint8')
+    X, y = np.zeros((samples_per_class * n_classes, n_features)), np.zeros(samples_per_class * n_classes, dtype='uint8')
     for j in range(n_classes):
         ix = range(samples_per_class * j, samples_per_class * (j + 1))
         r = np.linspace(0.0, 1, samples_per_class)  # radius
@@ -74,14 +75,42 @@ def animate_decision_boundary(nn: NeuralNetwork, weights: List[np.ndarray], lims
         nn.weights = w
         frames.append(go.Frame(data=[decision_surface(nn.predict, lims[0], lims[1], density=40, showscale=False),
                                      go.Scatter(x=X[:, 0], y=X[:, 1], mode="markers",
-                                                marker=dict(color=y, colorscale=custom, line=dict(color="black", width=1)))
+                                                marker=dict(color=y, colorscale=custom,
+                                                            line=dict(color="black", width=1)))
                                      ],
-                               layout=go.Layout(title=rf"$\text{{{title} Iteration {i+1}}}$")))
+                               layout=go.Layout(title=rf"$\text{{{title} Iteration {i + 1}}}$")))
 
     fig = go.Figure(data=frames[0]["data"], frames=frames[1:],
                     layout=go.Layout(title=frames[0]["layout"]["title"]))
     if save_name:
         animation_to_gif(fig, save_name, 200, width=400, height=400)
+
+
+def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarray], List[np.ndarray]]:
+    """
+    Callback generator for the GradientDescent class, recording the objective's value and parameters at each iteration
+
+    Return:
+    -------
+    callback: Callable[[], None]
+        Callback function to be passed to the GradientDescent class, recoding the objective's value and parameters
+        at each iteration of the algorithm
+
+    values: List[np.ndarray]
+        Recorded objective values
+
+    weights: List[np.ndarray]
+        Recorded parameters
+    """
+    values = []
+    weights = []
+
+    def callback(**kwargs) -> None:
+        if kwargs["t"] % 100 == 0:
+            values.append(kwargs['val'])
+            weights.append(kwargs['weights'])
+
+    return callback, values, weights
 
 
 if __name__ == '__main__':
@@ -96,20 +125,68 @@ if __name__ == '__main__':
     go.Figure(data=[go.Scatter(x=train_X[:, 0], y=train_X[:, 1], mode='markers',
                                marker=dict(color=train_y, colorscale=custom, line=dict(color="black", width=1)))],
               layout=go.Layout(title=r"$\text{Train Data}$", xaxis=dict(title=r"$x_1$"), yaxis=dict(title=r"$x_2$"),
-                               width=400, height=400))\
+                               width=400, height=400)) \
         .write_image(f"../figures/nonlinear_data.png")
 
     # ---------------------------------------------------------------------------------------------#
     # Question 1: Fitting simple network with two hidden layers                                    #
     # ---------------------------------------------------------------------------------------------#
-    raise NotImplementedError()
+    nn = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=16, activation=ReLU()),
+            FullyConnectedLayer(input_dim=16, output_dim=16, activation=ReLU()),
+            FullyConnectedLayer(input_dim=16, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000, callback=lambda x: None)
+    ).fit(train_X, train_y)
+
+    plot_decision_boundary(nn=nn, lims=lims, title="With 2 hidden layers")
+    acc = accuracy(test_y, nn.predict(test_X))
+    print(f"NN with 2 hidden layers accuracy = {acc}")
 
     # ---------------------------------------------------------------------------------------------#
     # Question 2: Fitting a network with no hidden layers                                          #
     # ---------------------------------------------------------------------------------------------#
-    raise NotImplementedError()
+    nn_no_hidden = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=n_classes),
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
+    ).fit(train_X, train_y)
+
+    plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers")
+    acc = accuracy(test_y, nn_no_hidden.predict(test_X))
+    print(f"NN with No hidden layers accuracy = {acc}")
 
     # ---------------------------------------------------------------------------------------------#
     # Question 3+4: Plotting network convergence process                                           #
     # ---------------------------------------------------------------------------------------------#
-    raise NotImplementedError()
+
+    # def callback(gd: GradientDescent, **kwargs):
+    #     pass
+
+    callback, values, weights = get_gd_state_recorder_callback()
+
+    # nn.solver_.callback_ = callback
+    # nn.fit(train_X, train_y)
+    widths = [16, 6]
+    for width in widths:
+        nn = NeuralNetwork(
+            modules=[
+                FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
+                FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
+                FullyConnectedLayer(input_dim=width, output_dim=n_classes)
+            ],
+            loss_fn=CrossEntropyLoss(),
+            solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000, callback=callback)
+        ).fit(train_X, train_y)
+
+        animate_decision_boundary(nn=nn,
+                                  weights=weights,
+                                  lims=lims,
+                                  X=train_X,
+                                  y=train_y,
+                                  title=f"Decision Boundary for NN with 2 hidden"
+                                        f" layers of width {width}")
