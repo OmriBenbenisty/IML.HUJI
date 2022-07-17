@@ -3,7 +3,7 @@ from typing import Callable, Tuple
 import numpy as np
 
 from IMLearn.base import BaseModule, BaseLR
-from .gradient_descent import default_callback
+from .gradient_descent import default_callback, GradientDescent
 from .learning_rate import FixedLR
 
 
@@ -49,9 +49,13 @@ class StochasticGradientDescent:
             Callable function receives as input any argument relevant for the current GD iteration. Arguments
             are specified in the `GradientDescent.fit` function
         """
-        raise NotImplementedError()
+        self.learning_rate_ = learning_rate
+        self.batch_size = batch_size
+        self.tol_ = tol
+        self.max_iter_ = max_iter
+        self.callback_ = callback
 
-    def fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray):
+    def fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         """
         Optimize module using SGD iterations over given input samples and responses
         Parameters
@@ -90,7 +94,30 @@ class StochasticGradientDescent:
             - batch_indices: np.ndarray of shape (n_batch,)
                 Sample indices used in current SGD iteration
         """
-        raise NotImplementedError()
+        indexes = np.arange(X.shape[0])
+        np.random.shuffle(indexes)
+        t = 0
+        t_max = X.shape[0] / self.batch_size
+        while t <= self.max_iter_:
+            i = t % t_max
+            batch_indices = indexes[i * self.batch_size:(i + 1) * self.batch_size]
+            batch_X = X[batch_indices]
+            batch_y = y[batch_indices]
+            x_t = f.weights_
+            val, grad, eta = self._partial_fit(f, batch_X, batch_y, t)
+            delta = np.linalg.norm(x_t - f.weights_)
+            self.callback_(solver=self,
+                           weights=f.weights_,
+                           val=val,
+                           grad=grad,
+                           t=t,
+                           eta=eta,
+                           delta=delta,
+                           batch_indices=batch_indices)
+            t += 1
+            if delta < self.tol_:
+                break
+        return f.weights_
 
     def _partial_fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray, t: int) -> Tuple[np.ndarray, np.ndarray, float]:
         """
@@ -114,4 +141,8 @@ class StochasticGradientDescent:
         eta: float
             learning rate used at current iteration
         """
-        raise NotImplementedError()
+        eta = self.learning_rate_.lr_step(t=t + 1)
+        grad = f.compute_jacobian(X=X, y=y)
+        f.weights = f.weights - eta * grad
+        val = f.compute_output(X=X, y=y)
+        return val, grad, eta

@@ -36,7 +36,7 @@ def misclassification_error(y_true: np.ndarray, y_pred: np.ndarray, normalize: b
     -------
     Misclassification of given predictions
     """
-    return np.sum(y_true != y_pred) / y_true.shape[0] if normalize\
+    return np.sum(y_true != y_pred) / y_true.shape[0] if normalize \
         else np.sum(y_true != y_pred)
     # prod = y_true * y_pred
     # return np.sum((prod < 0).astype(int)) / prod.shape[0] if normalize\
@@ -79,9 +79,17 @@ def cross_entropy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     -------
     Cross entropy of given predictions
     """
-    raise NotImplementedError()
-    
-    
+    eps = 1e-15
+    y_prob = np.clip(y_pred, eps, 1 - eps)
+    if y_prob.shape[1] == 1:
+        y_prob = np.append(1 - y_prob, y_prob, axis=1)
+
+    if y_true.shape[1] == 1:
+        y_true = np.append(1 - y_true, y_true, axis=1)
+
+    return -(y_true * np.log(y_prob)).sum() / y_prob.shape[0]
+
+
 def softmax(X: np.ndarray) -> np.ndarray:
     """
     Compute the Softmax function for each sample in given data
@@ -93,5 +101,6 @@ def softmax(X: np.ndarray) -> np.ndarray:
     output: ndarray of shape (n_samples, n_features)
         Softmax(x) for every sample x in given data X
     """
-    raise NotImplementedError()
-    
+    e_X = np.exp(X)
+    sum_X = np.sum(e_X, axis=0)
+    return np.apply_along_axis(lambda x: x / sum_X, axis=0, arr=X)
