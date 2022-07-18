@@ -39,10 +39,10 @@ class FullyConnectedLayer(BaseModule):
         Weights are randomly initialized following N(0, 1/input_dim)
         """
         super().__init__()
-        self._input_dim = input_dim
-        self._output_dim = output_dim
-        self._activation = activation
-        self._include_intercept = include_intercept
+        self.input_dim_ = input_dim
+        self.output_dim_ = output_dim
+        self.activation_ = activation
+        self.include_intercept_ = include_intercept
         mu = 0
         size = input_dim + 1 if include_intercept else input_dim
         sigma = 1 / size
@@ -61,8 +61,9 @@ class FullyConnectedLayer(BaseModule):
         output: ndarray of shape (n_samples, output_dim)
             Value of function at point self.weights
         """
-        _X = np.hstack((X, np.ones(X.shape[0]))) if self._include_intercept else X
-        return self._activation.compute_output(X=self.weights_ @ _X, **kwargs)
+        _X = np.hstack((X, np.ones(X.shape[0]))) if self.include_intercept_ else X
+        return self.activation_.compute_output(X=self.weights_ @ _X) if self.activation_ \
+            else self.weights_ @ _X
 
     def compute_jacobian(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -76,8 +77,9 @@ class FullyConnectedLayer(BaseModule):
         output: ndarray of shape (input_dim, n_samples)
             Derivative with respect to self.weights at point self.weights
         """
-        _X = np.hstack((X, np.ones(X.shape[0]))) if self._include_intercept else X
-        return self._activation.compute_jacobian(X=self.weights_ @ _X, **kwargs)
+        return X.T
+        # _X = np.hstack((X, np.ones(X.shape[0]))) if self.include_intercept_ else X
+        # return self.activation_.compute_jacobian(X=self.weights_ @ _X, **kwargs)
 
 
 class ReLU(BaseModule):
@@ -97,7 +99,7 @@ class ReLU(BaseModule):
         output: ndarray of shape (n_samples, input_dim)
             Data after performing the ReLU activation function
         """
-        return np.max(0, X)
+        return np.maximum(0, X)
 
     def compute_jacobian(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -136,6 +138,7 @@ class CrossEntropyLoss(BaseModule):
         """
         n_samples, input_dim = X.shape
 
+        # return cross_entropy(y_true=y, y_pred=)
         def c_e(_X):
             y_true = np.zeros(input_dim)
             _y = _X[input_dim]

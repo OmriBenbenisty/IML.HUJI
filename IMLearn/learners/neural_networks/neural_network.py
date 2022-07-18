@@ -1,5 +1,8 @@
 import numpy as np
 from typing import List, Union, NoReturn
+
+import pandas as pd
+
 from IMLearn.base.base_module import BaseModule
 from IMLearn.base.base_estimator import BaseEstimator
 from IMLearn.desent_methods import StochasticGradientDescent, GradientDescent
@@ -19,6 +22,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         Instance of optimization algorithm used to optimize network
     pre_activations_:
     """
+    pre_activations_: List
+    post_activations_: List
 
     def __init__(self,
                  modules: List[FullyConnectedLayer],
@@ -40,10 +45,10 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        self.compute_output(X, y)
-        self.compute_jacobian(X,y)
-        self.solver_.fit()
-
+        # self.compute_output(X, y)
+        # self.compute_jacobian(X,y)
+        # self.solver_.fit(f=self, X=X, y=pd.get_dummies(y).to_numpy())
+        self.weights_ = self.solver_.fit(f=self, X=X, y=y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -57,8 +62,9 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         responses : ndarray of shape (n_samples, )
             Predicted labels of given samples
         """
-        preds = self.compute_prediction(X)
-        return np.apply_along_axis(np.max, axis=1, arr=preds)
+        preds = self.compute_prediction(X=X)
+        # return np.apply_along_axis(np.max, axis=1, arr=preds)
+        return np.argmax(preds, axis=1)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -74,7 +80,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         loss : float
             Performance under specified loss function
         """
-        loss = self.loss_fn_.compute_output(X=self.predict(X) - y)
+        loss = self.loss_fn_.compute_output(X=self.predict(X), y=y)
         return float(np.mean(loss))
 
     # endregion
@@ -97,21 +103,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         -----
         Function stores all intermediate values in the `self.pre_activations_` and `self.post_activations_` arrays
         """
-        self.pre_activations_ = []
-        self.post_activations_ = []
-        post_i = X
-        self.post_activations_.append(post_i)
-        # Forward Pass
-        for module in self.modules_:
-            pre_i = post_i @ module.weights_
-            self.pre_activations_.append(pre_i)
-
-            post_i = module.compute_output(pre_i)
-            self.post_activations_.append(post_i)
-
-        loss = self.loss_fn_.compute_output(X=self.post_activations_[-1] - y)
-        self.post_activations_.append(loss)
-        return np.mean(loss)
+        pred = self.compute_prediction(X)
+        return self.loss_fn_.compute_output(X=pred, y=y, **kwargs)
 
         # pre_i = self.loss_fn_.compute_output(X=post_i @ self.loss_fn_.weights_)
         # self.pre_activations_.append(pre_i)
@@ -133,10 +126,21 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         output : ndarray of shape (n_samples, n_classes)
             Network's output values prior to the call of the loss function
         """
-        cur_X = X
+        post_i = X
+        self.pre_activations_ = [0]
+        self.post_activations_ = [post_i]
+
+        # Forward Pass
         for module in self.modules_:
-            cur_X = module.compute_output(cur_X)
-        return cur_X
+            pre_i = post_i @ module.weights_
+            self.pre_activations_.append(pre_i)
+
+            post_i = module.compute_output(pre_i)
+            self.post_activations_.append(post_i)
+
+        # loss = self.loss_fn_.compute_output(X=self.post_activations_[-1] - y)
+        # self.post_activations_.append(loss)
+        return self.post_activations_[-1]
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -161,25 +165,31 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         n_layers = len(self.modules_)
 
         # derivative_chain = []
-        partial_der = []
-        delta = self.post_activations_[-1] - y  # loss
+        # partial_der = []
+        # delta = self.post_activations_[-1] - y  # loss
+        delta = self.loss_fn_.compute_jacobian(X=self.post_activations_[-1], y=y, **kwargs)
+
+        partial_der = np.empty(len(self.modules_), dtype=object)
+        for t, layer in enumerate(reversed(self.modules_)):
+            jac = layer.activation_.compute_jacobian(X=self.pre_activations_[n_layers - t])
+            partial_der[n_layers - t - 1] = self.post_activations_[n_layers - t - 1].T @ (delta * jac) / n_samples
+            delta = (delta * jac) @ layer.weights.T
 
         # derivative_chain.append(delta)
-        partial_der.append(np.dot(delta, self.post_activations_[-2].transpose()))
-
-        last = n_layers - 2
-        for i in range(last, 0, -1):
-            z = self.pre_activations_[i]
-            derivative = self.modules_[i].compute_jacobian(z)
-            delta = np.dot(self.modules_[i+1].weights_.transpose(), delta) * derivative
-            # derivative_chain.append(delta)
-            partial_der.append(np.dot(delta, self.post_activations_[i-1].transpose()))
+        # partial_der.append(np.dot(delta, self.post_activations_[-2].transpose()))
+        #
+        # last = n_layers - 2
+        # for i in range(last, 0, -1):
+        #     z = self.pre_activations_[i]
+        #     derivative = self.modules_[i].compute_jacobian(z)
+        #     delta = np.dot(self.modules_[i+1].weights_.transpose(), delta) * derivative
+        #     # derivative_chain.append(delta)
+        #     partial_der.append(np.dot(delta, self.post_activations_[i-1].transpose()))
 
         # derivative_chain.reverse()
-        partial_der.reverse()
+        # partial_der.reverse()
 
         return self._flatten_parameters(params=partial_der)
-
 
         # The calculation of delta[last] here works with following
         # combinations of output activation and loss function:
@@ -203,7 +213,6 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         #     )
         #
         # return loss, coef_grads, intercept_grads
-
 
     @property
     def weights(self) -> np.ndarray:

@@ -13,6 +13,7 @@ from plotly.subplots import make_subplots
 import plotly.io as pio
 
 pio.templates.default = "simple_white"
+pio.renderers.default = 'browser'
 
 
 def generate_nonlinear_data(
@@ -141,7 +142,7 @@ if __name__ == '__main__':
         solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000, callback=lambda x: None)
     ).fit(train_X, train_y)
 
-    plot_decision_boundary(nn=nn, lims=lims, title="With 2 hidden layers")
+    plot_decision_boundary(nn=nn, lims=lims, title="With 2 hidden layers").show()
     acc = accuracy(test_y, nn.predict(test_X))
     print(f"NN with 2 hidden layers accuracy = {acc}")
 
