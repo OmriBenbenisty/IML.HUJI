@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+
 from IMLearn.base.base_module import BaseModule
 from IMLearn.metrics.loss_functions import cross_entropy, softmax
 
@@ -44,9 +46,9 @@ class FullyConnectedLayer(BaseModule):
         self.activation_ = activation
         self.include_intercept_ = include_intercept
         mu = 0
-        size = input_dim + 1 if include_intercept else input_dim
-        sigma = 1 / size
-        self.weights_ = np.random.normal(mu, sigma, size=size)
+        input_dim = input_dim + 1 if include_intercept else input_dim
+        sigma = 1 / input_dim
+        self.weights_ = np.random.normal(mu, sigma, size=(input_dim, output_dim))
 
     def compute_output(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -61,9 +63,9 @@ class FullyConnectedLayer(BaseModule):
         output: ndarray of shape (n_samples, output_dim)
             Value of function at point self.weights
         """
-        _X = np.hstack((X, np.ones(X.shape[0]))) if self.include_intercept_ else X
-        return self.activation_.compute_output(X=self.weights_ @ _X) if self.activation_ \
-            else self.weights_ @ _X
+        _X = np.c_[(X, np.ones((X.shape[0], 1)))] if self.include_intercept_ else X
+        return self.activation_.compute_output(X=_X @ self.weights_) if self.activation_ \
+            else _X @ self.weights_
 
     def compute_jacobian(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -77,7 +79,10 @@ class FullyConnectedLayer(BaseModule):
         output: ndarray of shape (input_dim, n_samples)
             Derivative with respect to self.weights at point self.weights
         """
-        return X.T
+        _X = np.c_[X, np.ones(X.shape[0])] if self.include_intercept_ else X
+        return self.activation_.compute_jacobian(X=_X @ self.weights_) if self.activation_ \
+            else _X
+        # return X.T
         # _X = np.hstack((X, np.ones(X.shape[0]))) if self.include_intercept_ else X
         # return self.activation_.compute_jacobian(X=self.weights_ @ _X, **kwargs)
 
@@ -99,7 +104,7 @@ class ReLU(BaseModule):
         output: ndarray of shape (n_samples, input_dim)
             Data after performing the ReLU activation function
         """
-        return np.maximum(0, X)
+        return np.maximum(X, 0)
 
     def compute_jacobian(self, X: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -138,14 +143,14 @@ class CrossEntropyLoss(BaseModule):
         """
         n_samples, input_dim = X.shape
 
-        # return cross_entropy(y_true=y, y_pred=)
-        def c_e(_X):
-            y_true = np.zeros(input_dim)
-            _y = _X[input_dim]
-            y_true[_y] = 1
-            return cross_entropy(y_true, softmax(_X[0:input_dim]))
-
-        return np.apply_along_axis(c_e, axis=1, arr=np.hstack(X, y))
+        return cross_entropy(y_true=y, y_pred=softmax(X))
+        # def c_e(_X):
+        #     y_true = np.zeros(input_dim)
+        #     _y = int(_X[input_dim])
+        #     y_true[_y] = 1
+        #     return cross_entropy(y_true, softmax(_X[0:input_dim]))
+        #
+        # return np.apply_along_axis(c_e, axis=1, arr=np.c_[X, y])
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -161,10 +166,23 @@ class CrossEntropyLoss(BaseModule):
         output: ndarray of shape (n_samples, input_dim)
             derivative of cross-entropy loss with respect to given input
         """
+        y_dummy = pd.get_dummies(y).to_numpy()
+        s_max = softmax(X)
+        ret = - y_dummy / s_max
+        assert ret.shape == X.shape
+        return ret
 
         # def jacobian_softmax(s):
         #     return np.diag(s) - np.outer(s, s)
-        s_max = softmax(X)
-        return - y / s_max
+
+
+        # s_max = softmax(X)
+        # # b does one-hot encoding of y
+        # b = np.zeros_like(s_max)
+        # b[np.arange(s_max.shape[0]), y] = 1
+        #
+        # return s_max - b
+        # s_max = softmax(X)
+        # return - y / s_max
         # return np.array([jacobian_softmax(row) for row in s])
         # return np.diag(s) - np.outer(s, s)

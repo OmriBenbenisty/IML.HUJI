@@ -48,7 +48,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         # self.compute_output(X, y)
         # self.compute_jacobian(X,y)
         # self.solver_.fit(f=self, X=X, y=pd.get_dummies(y).to_numpy())
-        self.weights_ = self.solver_.fit(f=self, X=X, y=y)
+        self.solver_.fit(f=self, X=X, y=y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -106,7 +106,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         pred = self.compute_prediction(X)
         return self.loss_fn_.compute_output(X=pred, y=y, **kwargs)
 
-        # pre_i = self.loss_fn_.compute_output(X=post_i @ self.loss_fn_.weights_)
+        # pre_i = self.loss_fn_.compute_output(X=post_i @ self.loss_fn_.weights)
         # self.pre_activations_.append(pre_i)
         #
         # post_i = module.compute_output(pre_i)
@@ -132,10 +132,11 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
         # Forward Pass
         for module in self.modules_:
-            pre_i = post_i @ module.weights_
+            temp = np.c_[post_i, np.ones(post_i.shape[0])] if module.include_intercept_ else post_i
+            pre_i = temp @ module.weights
             self.pre_activations_.append(pre_i)
 
-            post_i = module.compute_output(pre_i)
+            post_i = module.compute_output(post_i)
             self.post_activations_.append(post_i)
 
         # loss = self.loss_fn_.compute_output(X=self.post_activations_[-1] - y)
@@ -167,13 +168,41 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         # derivative_chain = []
         # partial_der = []
         # delta = self.post_activations_[-1] - y  # loss
-        delta = self.loss_fn_.compute_jacobian(X=self.post_activations_[-1], y=y, **kwargs)
 
-        partial_der = np.empty(len(self.modules_), dtype=object)
-        for t, layer in enumerate(reversed(self.modules_)):
-            jac = layer.activation_.compute_jacobian(X=self.pre_activations_[n_layers - t])
-            partial_der[n_layers - t - 1] = self.post_activations_[n_layers - t - 1].T @ (delta * jac) / n_samples
-            delta = (delta * jac) @ layer.weights.T
+        delta_t = self.loss_fn_.compute_jacobian(X=self.post_activations_[-1], y=y, **kwargs)
+
+        partial_der = []
+        o_t_1 = self.post_activations_[-1]
+        # partial_der = np.empty(len(self.modules_), dtype=object)
+        for i in range(n_layers):
+            module = self.modules_[n_layers - i - 1]
+            w_t_1 = module.weights
+            o_t = self.post_activations_[n_layers - i - 1]
+            jac = module.compute_jacobian(o_t)
+
+            # if module.include_intercept_:
+            #     weights = np.delete(weights, 0, axis=1)
+            #     activation = np.c_[activation, np.ones(activation.shape[0])]
+            del_jac = np.einsum('ij,ik->jk', delta_t, jac)
+            partial_der.append(o_t_1 @ del_jac)
+            delta_t = (del_jac @ w_t_1.T)
+            o_t_1 = o_t
+
+        partial_der.reverse()
+
+        # for t, module in enumerate(reversed(self.modules_), start =1):
+        #     if module.activation_:
+        #         jac = module.activation_.compute_jacobian(X=self.pre_activations_[n_layers - t - 1])
+        #     else:
+        #         shape = self.pre_activations_[n_layers - t - 1].shape
+        #         jac = np.ones(shape=(shape[0], shape[1] + 1)) if module.include_intercept_ else np.ones(shape)
+        #         # jac = np.einsum('ij,kj->ikj', jac, np.eye(jac.shape[1], dtype=jac.dtype))
+        #
+        #     # if module.include_intercept_:
+        #     #     partial_der[n_layers - t - 1] =
+        #     # else:
+        #     partial_der[n_layers - t - 1] = self.post_activations_[n_layers - t - 1].T @ (delta * jac) / n_samples
+        #     delta = (delta * jac) @ module.weights.T
 
         # derivative_chain.append(delta)
         # partial_der.append(np.dot(delta, self.post_activations_[-2].transpose()))
@@ -188,6 +217,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
         # derivative_chain.reverse()
         # partial_der.reverse()
+        for i in range(len(partial_der)):
+            partial_der[i] = np.mean(partial_der[i], axis=0).T
 
         return self._flatten_parameters(params=partial_der)
 
@@ -283,3 +314,11 @@ class NeuralNetwork(BaseEstimator, BaseModule):
             low = high
         return param_list
     # endregion
+
+"""
+
+
+
+"""
+
+

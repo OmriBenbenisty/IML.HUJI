@@ -122,14 +122,14 @@ class GradientDescent:
         """
         x_ts = f.weights
         best_x_t = np.zeros(shape=f.shape)
-        best_out = np.inf
+        best_out = f.compute_output(X=X, y=y)
         t = 0
         while t <= self.max_iter_:
             eta = self.learning_rate_.lr_step(t=t+1)
             grad = f.compute_jacobian(X=X, y=y)
             x_t = f.weights - eta * grad  # update weights
             delta = np.linalg.norm(x_t - f.weights)
-            f.weights = x_t
+            f.weights(x_t)
             cur_out = f.compute_output(X=X, y=y)
             if cur_out < best_out:
                 best_out = cur_out
