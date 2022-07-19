@@ -129,11 +129,11 @@ class GradientDescent:
             grad = f.compute_jacobian(X=X, y=y)
             x_t = f.weights - eta * grad  # update weights
             delta = np.linalg.norm(x_t - f.weights)
-            f.weights(x_t)
+            f.weights = x_t
             cur_out = f.compute_output(X=X, y=y)
-            if cur_out < best_out:
-                best_out = cur_out
-                best_x_t = f.weights
+            # if cur_out < best_out:
+            #     best_out = cur_out
+            #     best_x_t = f.weights
             self.callback_(solver=self,
                            weights=f.weights,
                            val=cur_out,

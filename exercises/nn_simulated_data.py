@@ -157,7 +157,7 @@ if __name__ == '__main__':
         solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
     ).fit(train_X, train_y)
 
-    plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers")
+    plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers").show()
     acc = accuracy(test_y, nn_no_hidden.predict(test_X))
     print(f"NN with No hidden layers accuracy = {acc}")
 
@@ -174,6 +174,7 @@ if __name__ == '__main__':
     # nn.fit(train_X, train_y)
     widths = [16, 6]
     for width in widths:
+        print(f"width {width}")
         nn = NeuralNetwork(
             modules=[
                 FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
@@ -190,4 +191,5 @@ if __name__ == '__main__':
                                   X=train_X,
                                   y=train_y,
                                   title=f"Decision Boundary for NN with 2 hidden"
-                                        f" layers of width {width}")
+                                        f" layers of width {width}",
+                                  save_name=f"../figures/Decision Boundary for NN with 2 hidden layers of width {width}.gif")

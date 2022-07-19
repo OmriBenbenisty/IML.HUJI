@@ -22,8 +22,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         Instance of optimization algorithm used to optimize network
     pre_activations_:
     """
-    pre_activations_: List
-    post_activations_: List
+    pre_activations_: np.ndarray
+    post_activations_: np.ndarray
 
     def __init__(self,
                  modules: List[FullyConnectedLayer],
@@ -33,6 +33,8 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         self.modules_ = modules
         self.loss_fn_ = loss_fn
         self.solver_ = solver
+        self.pre_activations_ = np.empty(len(modules) + 1, dtype=object)
+        self.post_activations_ = np.empty(len(modules) + 1, dtype=object)
 
     # region BaseEstimator implementations
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
@@ -81,6 +83,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
             Performance under specified loss function
         """
         loss = self.loss_fn_.compute_output(X=self.predict(X), y=y)
+        print(loss.shape)
         return float(np.mean(loss))
 
     # endregion
@@ -126,8 +129,28 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         output : ndarray of shape (n_samples, n_classes)
             Network's output values prior to the call of the loss function
         """
-        post_i = X
-        self.pre_activations_ = [0]
+
+        o = X
+        self.pre_activations_[0] = 0
+        # self.post_activations_[0] = np.c_[X, np.ones(X.shape[0])] if self.modules_[0].include_intercept_ else X
+        self.post_activations_[0] = o
+
+        for t, layer in enumerate(self.modules_):
+            temp = np.c_[o, np.ones(o.shape[0])] if layer.include_intercept_ else o
+            weights = np.r_[np.atleast_2d(layer.bias_), layer.weights_] if layer.include_intercept_ else layer.weights_
+
+            a = temp @ weights
+            self.pre_activations_[t + 1] = a
+            if layer.activation_:
+                o = layer.activation_.compute_output(X=a)
+            else:
+                o = a
+            self.post_activations_[t + 1] = o
+
+        return self.post_activations_[-1]
+
+        post_i = X.copy()
+        self.pre_activations_ = []
         self.post_activations_ = [post_i]
 
         # Forward Pass
@@ -141,7 +164,10 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
         # loss = self.loss_fn_.compute_output(X=self.post_activations_[-1] - y)
         # self.post_activations_.append(loss)
-        return self.post_activations_[-1]
+        ret = self.post_activations_[-1]
+        assert ret.shape[0] == X.shape[0]
+        assert ret.shape[1] == self.modules_[-1].output_dim_
+        return ret
 
     def compute_jacobian(self, X: np.ndarray, y: np.ndarray, **kwargs) -> np.ndarray:
         """
@@ -161,6 +187,61 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         `self.pre_activations_` and `self.post_activations_`
         """
         # Backward Pass
+
+        n_layers = len(self.modules_)
+        delta_t = self.loss_fn_.compute_jacobian(X=self.post_activations_[-1], y=y, **kwargs)
+
+        partials = np.empty(len(self.modules_), dtype=object)
+        for t, layer in enumerate(reversed(self.modules_)):
+            if layer.activation_:
+                jac = layer.activation_.compute_jacobian(X=self.post_activations_[n_layers - t])
+            else:
+                jac = np.ones_like(self.post_activations_[n_layers - t])
+            partials[n_layers - t - 1] = self.post_activations_[n_layers - t - 1].T @ (delta_t * jac) / len(X)
+            delta_t = (delta_t * jac) @ layer.weights.T
+        ret = self._flatten_parameters(partials)
+        assert ret.shape[0] == np.sum([f.weights.size for f in self.modules_])
+        return ret
+
+
+        # partials = []  # array to store derivatives per layer
+        #
+        # # initialize delta value (used to save up calculations in backpropagation)
+        # delta_T = self.loss_fn_.compute_jacobian(X=self.post_activations_[-1], y=y)
+        # delta_T = np.einsum('kjl,kl->kj', self.modules_[-1].compute_jacobian(X=self.pre_activations_[-1]), delta_T)
+        #
+        # # backpropagate from last layer to first layer, note the index i starts from 1
+        # for i, module in enumerate(reversed(self.modules_), start=1):
+        #     # calculate the derivative of objective with respect to the weights of the current layer
+        #     if module.include_intercept_:  # add bias term
+        #         final_partial = np.einsum('ki,kj->kij', delta_T, np.concatenate((np.ones((self.post_activations_[-i-1].shape[0], 1)), self.post_activations_[-i - 1]), axis=1))
+        #     else:
+        #         final_partial = np.einsum('ki,kj->kij', delta_T, self.post_activations_[-i - 1])
+        #
+        #     partials.append(final_partial)  # save the derivative
+        #
+        #     # update delta value
+        #
+        #     if i < len(self.modules_):  # in the last iter we don't update delta (+we can't, index error)
+        #         activation_derivative = self.modules_[-i-1].activation_.compute_jacobian(X=self.pre_activations_[-i-1])
+        #
+        #         if module.include_intercept_:  # if there's a bias, don't use it since it doesn't affect previous layers
+        #             weights_times_delta = np.einsum('il,kl->ki', module.weights[1:, :], delta_T)
+        #             delta_T = np.einsum('kil,kl->ki', activation_derivative, weights_times_delta)
+        #         else:
+        #             weights_times_delta = np.einsum('il,kl->ki', module.weights, delta_T)
+        #             delta_T = np.einsum('kil,kl->ki', activation_derivative, weights_times_delta)
+        #
+        # # reverse partials to get correct order
+        # partials = partials[::-1]
+        #
+        # # get the average of the derivatives and transpose for correct shape
+        # for i in range(len(partials)):
+        #     partials[i] = np.mean(partials[i], axis=0).T
+        #
+        # # return the flattened array
+        # return self._flatten_parameters(partials)
+
         n_samples = X.shape[0]
 
         n_layers = len(self.modules_)
@@ -175,19 +256,28 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         o_t_1 = self.post_activations_[-1]
         # partial_der = np.empty(len(self.modules_), dtype=object)
         for i in range(n_layers):
+
             module = self.modules_[n_layers - i - 1]
             w_t_1 = module.weights
             o_t = self.post_activations_[n_layers - i - 1]
             jac = module.compute_jacobian(o_t)
-
+            del_jac = delta_t * jac
             # if module.include_intercept_:
             #     weights = np.delete(weights, 0, axis=1)
             #     activation = np.c_[activation, np.ones(activation.shape[0])]
-            del_jac = np.einsum('ij,ik->jk', delta_t, jac)
-            partial_der.append(o_t_1 @ del_jac)
+            # del_jac = np.einsum('ij,ik->jk', delta_t, jac)
+            # del_jac = jac @ delta_t
+            # der = np.einsum('kj,jj->kjj', o_t_1, del_jac)
+            der =o_t_1.T @ del_jac
+            # partial_der.append(o_t_1 @ del_jac)
+            partial_der.append(der)
             delta_t = (del_jac @ w_t_1.T)
             o_t_1 = o_t
 
+        # ret = self._flatten_parameters(params=partial_der)
+        # # assert ret.shape[0] == n_samples
+        # assert ret.shape[0] == np.sum([f.weights.size for f in self.modules_])
+        # return ret
         partial_der.reverse()
 
         # for t, module in enumerate(reversed(self.modules_), start =1):
@@ -217,10 +307,17 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
         # derivative_chain.reverse()
         # partial_der.reverse()
+
+
         for i in range(len(partial_der)):
             partial_der[i] = np.mean(partial_der[i], axis=0).T
 
-        return self._flatten_parameters(params=partial_der)
+        ret = self._flatten_parameters(params=partial_der)
+        # assert ret.shape[0] == n_samples
+        assert ret.shape[0] == np.sum([f.weights.size for f in self.modules_])
+        return ret
+
+
 
         # The calculation of delta[last] here works with following
         # combinations of output activation and loss function:
