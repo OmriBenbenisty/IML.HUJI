@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 def mean_square_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -64,7 +65,7 @@ def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     return ((y_true - y_pred) == 0).astype(int).mean()
 
 
-def cross_entropy(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
+def cross_entropy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
     Calculate the cross entropy of given predictions
 
@@ -80,15 +81,21 @@ def cross_entropy(y_true: np.ndarray, y_pred: np.ndarray) -> np.ndarray:
     Cross entropy of given predictions
     """
     eps = 1e-10
-    y_pred = np.clip(y_pred, eps, 1 - eps)
+    y_pred = np.clip(y_pred, eps, 5000)
+    # y_pred =  np.argmax(y_pred, axis=1)
+
     return -np.sum(y_true * np.log(y_pred))
+
     # if y_prob.shape[1] == 1:
     #     y_prob = np.append(1 - y_prob, y_prob, axis=1)
     #
     # if y_true.shape[1] == 1:
     #     y_true = np.append(1 - y_true, y_true, axis=1)
-    b = np.zeros_like(y_pred)
-    b[np.arange(len(y_pred)), y_true] = 1
+
+    b = pd.get_dummies(y_true).to_numpy()
+
+    # b = np.zeros_like(y_pred)
+    # b[np.arange(y_pred.shape[0]), y_true] = 1
 
     return -np.sum(b * np.log(y_pred), axis=1)
     # return -(y_true * np.log(y_prob)).sum() / y_prob.shape[0]
@@ -105,9 +112,12 @@ def softmax(X: np.ndarray) -> np.ndarray:
     output: ndarray of shape (n_samples, n_features)
         Softmax(x) for every sample x in given data X
     """
-    # X = np.clip(X.copy(), -709.78, 709.78)
+    # X = np.clip(X, -709.78, 709.78)
     e_X = np.exp(X)
     # e_X = np.clip(e_X, 1e-10, np.inf)
+
+    return e_X / np.sum(e_X, axis=1,keepdims=True)
+
     return (e_X.T / np.sum(e_X, axis=1)).T
     sum_X = np.sum(e_X, axis=1, keepdims=True)
     ret = e_X / sum_X

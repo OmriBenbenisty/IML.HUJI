@@ -70,7 +70,7 @@ class FullyConnectedLayer(BaseModule):
         """
         assert X.shape[1] == self.input_dim_
         _X = np.c_[(X, np.ones((X.shape[0], 1)))] if self.include_intercept_ else X
-        weights = np.r_[np.atleast_2d(self.bias_), self.weights_] if self.include_intercept_ else self.weights_
+        weights = np.r_[self.weights_, np.atleast_2d(self.bias_)] if self.include_intercept_ else self.weights_
 
         ret = self.activation_.compute_output(X=_X @ weights) if self.activation_ \
             else _X @ weights
@@ -92,7 +92,7 @@ class FullyConnectedLayer(BaseModule):
         """
         assert X.shape[1] == self.input_dim_
         _X = np.c_[X, np.ones(X.shape[0])] if self.include_intercept_ else X
-        weights = np.r_[np.atleast_2d(self.bias_), self.weights_] if self.include_intercept_ else self.weights_
+        weights = np.r_[ self.weights_, np.atleast_2d(self.bias_)] if self.include_intercept_ else self.weights_
         if self.activation_:
             ret = self.activation_.compute_jacobian(X=_X @ weights) @ _X.T
             # ret = np.einsum('ki,kj->kij', _X, self.activation_.compute_jacobian(X=_X @ self.weights, **kwargs))
@@ -173,7 +173,9 @@ class CrossEntropyLoss(BaseModule):
             cross-entropy loss value of given X and y
         """
         softmax_result = -np.log(softmax(X))
-        return softmax_result[np.arange(len(y)), y]
+        ret = softmax_result[np.arange(len(y)), y]
+        assert ret.shape == y.shape
+        return ret
         n_samples, input_dim = X.shape
         ret = cross_entropy(y_true=y, y_pred=softmax(X))
         assert ret.shape == y.shape

@@ -107,7 +107,9 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         Function stores all intermediate values in the `self.pre_activations_` and `self.post_activations_` arrays
         """
         pred = self.compute_prediction(X)
-        return self.loss_fn_.compute_output(X=pred, y=y, **kwargs)
+        ls = self.loss_fn_.compute_output(X=pred, y=y, **kwargs)
+        return ls
+        return np.argmax(ls, axis=0)
 
         # pre_i = self.loss_fn_.compute_output(X=post_i @ self.loss_fn_.weights)
         # self.pre_activations_.append(pre_i)
@@ -137,7 +139,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
 
         for t, layer in enumerate(self.modules_):
             temp = np.c_[o, np.ones(o.shape[0])] if layer.include_intercept_ else o
-            weights = np.r_[np.atleast_2d(layer.bias_), layer.weights_] if layer.include_intercept_ else layer.weights_
+            weights = np.r_[layer.weights_, np.atleast_2d(layer.bias_)] if layer.include_intercept_ else layer.weights_
 
             a = temp @ weights
             self.pre_activations_[t + 1] = a
@@ -187,7 +189,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
         `self.pre_activations_` and `self.post_activations_`
         """
         # Backward Pass
-
+        n_samples = X.shape[0]
         n_layers = len(self.modules_)
         delta_t = self.loss_fn_.compute_jacobian(X=self.post_activations_[-1], y=y, **kwargs)
 
@@ -197,7 +199,7 @@ class NeuralNetwork(BaseEstimator, BaseModule):
                 jac = layer.activation_.compute_jacobian(X=self.post_activations_[n_layers - t])
             else:
                 jac = np.ones_like(self.post_activations_[n_layers - t])
-            partials[n_layers - t - 1] = self.post_activations_[n_layers - t - 1].T @ (delta_t * jac) / len(X)
+            partials[n_layers - t - 1] = self.post_activations_[n_layers - t - 1].T @ (delta_t * jac) / n_samples
             delta_t = (delta_t * jac) @ layer.weights.T
         ret = self._flatten_parameters(partials)
         assert ret.shape[0] == np.sum([f.weights.size for f in self.modules_])

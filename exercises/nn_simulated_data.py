@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from typing import Tuple, List, Callable
-from IMLearn.metrics.loss_functions import accuracy
+from IMLearn.metrics.loss_functions import accuracy, cross_entropy
 from IMLearn.learners.neural_networks.modules import FullyConnectedLayer, ReLU, CrossEntropyLoss
 from IMLearn.learners.neural_networks.neural_network import NeuralNetwork
 from IMLearn.desent_methods import GradientDescent, FixedLR
@@ -79,39 +79,27 @@ def animate_decision_boundary(nn: NeuralNetwork, weights: List[np.ndarray], lims
                                                 marker=dict(color=y, colorscale=custom,
                                                             line=dict(color="black", width=1)))
                                      ],
-                               layout=go.Layout(title=rf"$\text{{{title} Iteration {i + 1}}}$")))
+                               layout=go.Layout(title=f"{title} Iteration {i + 1}")))
 
-    fig = go.Figure(data=frames[0]["data"], frames=frames[1:],
-                    layout=go.Layout(title=frames[0]["layout"]["title"]))
+    fig = go.Figure(data=frames[-1]["data"], frames=frames[0:],
+                    layout=go.Layout(title=frames[-1]["layout"]["title"]))
     if save_name:
         animation_to_gif(fig, save_name, 200, width=400, height=400)
+    return fig
 
 
-def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarray], List[np.ndarray]]:
-    """
-    Callback generator for the GradientDescent class, recording the objective's value and parameters at each iteration
-
-    Return:
-    -------
-    callback: Callable[[], None]
-        Callback function to be passed to the GradientDescent class, recoding the objective's value and parameters
-        at each iteration of the algorithm
-
-    values: List[np.ndarray]
-        Recorded objective values
-
-    weights: List[np.ndarray]
-        Recorded parameters
-    """
+def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
     values = []
     weights = []
+    gradients = []
 
     def callback(**kwargs) -> None:
+        values.append(kwargs['val'])
+        gradients.append(kwargs['grad'])
         if kwargs["t"] % 100 == 0:
-            values.append(kwargs['val'])
             weights.append(kwargs['weights'])
 
-    return callback, values, weights
+    return callback, values, weights, gradients
 
 
 if __name__ == '__main__':
@@ -139,7 +127,7 @@ if __name__ == '__main__':
     #         FullyConnectedLayer(input_dim=16, output_dim=n_classes)
     #     ],
     #     loss_fn=CrossEntropyLoss(),
-    #     solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000, callback=lambda x: None)
+    #     solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
     # ).fit(train_X, train_y)
     #
     # plot_decision_boundary(nn=nn, lims=lims, title="With 2 hidden layers").show()
@@ -149,17 +137,17 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------------------#
     # Question 2: Fitting a network with no hidden layers                                          #
     # ---------------------------------------------------------------------------------------------#
-    nn_no_hidden = NeuralNetwork(
-        modules=[
-            FullyConnectedLayer(input_dim=n_features, output_dim=n_classes),
-        ],
-        loss_fn=CrossEntropyLoss(),
-        solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
-    ).fit(train_X, train_y)
-
-    plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers").show()
-    acc = accuracy(test_y, nn_no_hidden.predict(test_X))
-    print(f"NN with No hidden layers accuracy = {acc}")
+    # nn_no_hidden = NeuralNetwork(
+    #     modules=[
+    #         FullyConnectedLayer(input_dim=n_features, output_dim=n_classes),
+    #     ],
+    #     loss_fn=CrossEntropyLoss(),
+    #     solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
+    # ).fit(train_X, train_y)
+    #
+    # plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers").show()
+    # acc = accuracy(test_y, nn_no_hidden.predict(test_X))
+    # print(f"NN with No hidden layers accuracy = {acc}")
 
     # ---------------------------------------------------------------------------------------------#
     # Question 3+4: Plotting network convergence process                                           #
@@ -168,13 +156,11 @@ if __name__ == '__main__':
     # def callback(gd: GradientDescent, **kwargs):
     #     pass
 
-    callback, values, weights = get_gd_state_recorder_callback()
-
     # nn.solver_.callback_ = callback
     # nn.fit(train_X, train_y)
     widths = [16, 6]
     for width in widths:
-        print(f"width {width}")
+        callback, values, weights, grads = get_gd_state_recorder_callback()
         nn = NeuralNetwork(
             modules=[
                 FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
@@ -185,11 +171,51 @@ if __name__ == '__main__':
             solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000, callback=callback)
         ).fit(train_X, train_y)
 
-        animate_decision_boundary(nn=nn,
-                                  weights=weights,
-                                  lims=lims,
-                                  X=train_X,
-                                  y=train_y,
-                                  title=f"Decision Boundary for NN with 2 hidden"
-                                        f" layers of width {width}",
-                                  save_name=f"../figures/Decision Boundary for NN with 2 hidden layers of width {width}.gif")
+        # plot convergence of the objective function
+        conv_proc = go.Figure(data=[go.Scatter(x=np.arange(len(values)),
+                                               y=[np.mean(value) for value in values],
+                                               # y=[cross_entropy(y_true=train_y, y_pred=val) for val in values],
+                                               name="Loss")],
+                              layout=go.Layout(
+                                  title="Convergence Rate for NN with<br>"
+                                        f"2 hidden layers of width {width}",
+                                  xaxis=dict(title=r"$\text{Iteration}$"),
+                                  yaxis=dict(title=r"$\text{Objective}$")))
+        # add norm of weights
+        conv_proc.add_trace(go.Scatter(x=np.arange(len(values)),
+                                       y=[np.linalg.norm(grad) for grad in grads],
+                                       name="Grad Norm"))
+        conv_proc.show()
+
+        # conv_proc = go.Figure(
+        #     data=go.Scatter(
+        #         x=np.arange(len(values)),
+        #         y=values
+        #     ),
+        #     layout=go.Layout(
+        #         title="Convergence Rate for NN with<br>"
+        #               f"2 hidden layers of width {width}",
+        #         xaxis_title=r"Iteration",
+        #         yaxis_title=r"Loss"
+        #     )
+        # )
+        # conv_proc.show()
+
+        fig = animate_decision_boundary(nn=nn,
+                                        weights=weights,
+                                        lims=lims,
+                                        X=train_X,
+                                        y=train_y,
+                                        title=f"Decision Boundary for NN with<br>"
+                                              f"2 hidden layers of width {width}"
+                                        )
+        fig.update_layout(
+            margin=dict(t=100),
+            width=1000,
+            height=1000,
+            updatemenus=[dict(type="buttons", buttons=[AnimationButtons.play(), AnimationButtons.pause()])])
+        fig.show()
+        # ,save_name=f"../figures/Decision Boundary for NN with"
+        #        f" 2 hidden layers of width {width}.gif")
+
+    print("-------------Done--------------------")
