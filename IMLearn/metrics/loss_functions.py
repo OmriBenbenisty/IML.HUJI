@@ -112,7 +112,7 @@ def softmax(X: np.ndarray) -> np.ndarray:
     output: ndarray of shape (n_samples, n_features)
         Softmax(x) for every sample x in given data X
     """
-    # X = np.clip(X, -709.78, 709.78)
+    X = np.clip(X, -709.78, 709.78)
     e_X = np.exp(X)
     # e_X = np.clip(e_X, 1e-10, np.inf)
 

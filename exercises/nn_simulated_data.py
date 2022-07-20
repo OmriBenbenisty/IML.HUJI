@@ -153,11 +153,6 @@ if __name__ == '__main__':
     # Question 3+4: Plotting network convergence process                                           #
     # ---------------------------------------------------------------------------------------------#
 
-    # def callback(gd: GradientDescent, **kwargs):
-    #     pass
-
-    # nn.solver_.callback_ = callback
-    # nn.fit(train_X, train_y)
     widths = [16, 6]
     for width in widths:
         callback, values, weights, grads = get_gd_state_recorder_callback()

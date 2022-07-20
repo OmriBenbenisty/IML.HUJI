@@ -1,6 +1,7 @@
 from typing import Tuple
 import numpy as np
 import pandas as pd
+import sklearn.metrics
 
 
 def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .75) \
@@ -66,7 +67,6 @@ def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     matrix = np.zeros((unique_a_size, unique_b_size))
 
     for i in range(unique_a_size):
-        matrix[a[i]][b[i]] += 1
-        # for j in range(unique_b_size):
-        #     matrix[i, j] = np.sum((unique_a == unique_a[i]) & (unique_b == unique_b[j]))
+        for j in range(unique_b_size):
+            matrix[i, j] = np.sum((a == unique_a[i]) & (b == unique_b[j]))
     return matrix
