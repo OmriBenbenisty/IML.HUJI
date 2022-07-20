@@ -120,34 +120,34 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------------------#
     # Question 1: Fitting simple network with two hidden layers                                    #
     # ---------------------------------------------------------------------------------------------#
-    # nn = NeuralNetwork(
-    #     modules=[
-    #         FullyConnectedLayer(input_dim=n_features, output_dim=16, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=16, output_dim=16, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=16, output_dim=n_classes)
-    #     ],
-    #     loss_fn=CrossEntropyLoss(),
-    #     solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
-    # ).fit(train_X, train_y)
-    #
-    # plot_decision_boundary(nn=nn, lims=lims, title="With 2 hidden layers").show()
-    # acc = accuracy(test_y, nn.predict(test_X))
-    # print(f"NN with 2 hidden layers accuracy = {acc}")
+    nn = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=16, activation=ReLU()),
+            FullyConnectedLayer(input_dim=16, output_dim=16, activation=ReLU()),
+            FullyConnectedLayer(input_dim=16, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
+    ).fit(train_X, train_y)
+
+    plot_decision_boundary(nn=nn, lims=lims, title="With 2 hidden layers").show()
+    acc = accuracy(test_y, nn.predict(test_X))
+    print(f"NN with 2 hidden layers accuracy = {acc}")
 
     # ---------------------------------------------------------------------------------------------#
     # Question 2: Fitting a network with no hidden layers                                          #
     # ---------------------------------------------------------------------------------------------#
-    # nn_no_hidden = NeuralNetwork(
-    #     modules=[
-    #         FullyConnectedLayer(input_dim=n_features, output_dim=n_classes),
-    #     ],
-    #     loss_fn=CrossEntropyLoss(),
-    #     solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
-    # ).fit(train_X, train_y)
-    #
-    # plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers").show()
-    # acc = accuracy(test_y, nn_no_hidden.predict(test_X))
-    # print(f"NN with No hidden layers accuracy = {acc}")
+    nn_no_hidden = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=n_classes),
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=GradientDescent(learning_rate=FixedLR(base_lr=0.1), max_iter=5000)
+    ).fit(train_X, train_y)
+
+    plot_decision_boundary(nn=nn_no_hidden, lims=lims, title="With NO hidden layers").show()
+    acc = accuracy(test_y, nn_no_hidden.predict(test_X))
+    print(f"NN with No hidden layers accuracy = {acc}")
 
     # ---------------------------------------------------------------------------------------------#
     # Question 3+4: Plotting network convergence process                                           #

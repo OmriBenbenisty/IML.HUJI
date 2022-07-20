@@ -66,6 +66,7 @@ def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     matrix = np.zeros((unique_a_size, unique_b_size))
 
     for i in range(unique_a_size):
-        for j in range(unique_b_size):
-            matrix[i, j] = np.sum((unique_a == unique_a[i]) & (unique_b == unique_b[j]))
+        matrix[a[i]][b[i]] += 1
+        # for j in range(unique_b_size):
+        #     matrix[i, j] = np.sum((unique_a == unique_a[i]) & (unique_b == unique_b[j]))
     return matrix

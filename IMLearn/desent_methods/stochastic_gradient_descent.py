@@ -100,14 +100,17 @@ class StochasticGradientDescent:
         t_max = X.shape[0] / self.batch_size
         while t <= self.max_iter_:
             i = t % t_max
-            batch_indices = indexes[i * self.batch_size:(i + 1) * self.batch_size]
+            start = int(i * self.batch_size)
+            end = int((i + 1) * self.batch_size)
+            batch_indices = indexes[start:end]
             batch_X = X[batch_indices]
             batch_y = y[batch_indices]
-            x_t = f.weights_
+            x_t = f.weights
+            f.compute_output(X=batch_X, y=batch_y)
             val, grad, eta = self._partial_fit(f, batch_X, batch_y, t)
-            delta = np.linalg.norm(x_t - f.weights_)
+            delta = np.linalg.norm(x_t - f.weights)
             self.callback_(solver=self,
-                           weights=f.weights_,
+                           weights=f.weights,
                            val=val,
                            grad=grad,
                            t=t,
@@ -117,7 +120,7 @@ class StochasticGradientDescent:
             t += 1
             if delta < self.tol_:
                 break
-        return f.weights_
+        return f.weights
 
     def _partial_fit(self, f: BaseModule, X: np.ndarray, y: np.ndarray, t: int) -> Tuple[np.ndarray, np.ndarray, float]:
         """

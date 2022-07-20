@@ -15,6 +15,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.io as pio
 pio.templates.default = "simple_white"
+pio.renderers.default = 'browser'
+
 
 
 def load_mnist() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -76,15 +78,18 @@ def plot_images_grid(images: np.ndarray, title: str = ""):
         .update_yaxes(showticklabels=False)
 
 
-def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarray], List[np.ndarray]]:
+def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarray], List[np.ndarray], List[np.ndarray]]:
     values = []
-    deltas = []
+    weights = []
+    gradients = []
 
     def callback(**kwargs) -> None:
         values.append(kwargs['val'])
-        deltas.append(kwargs['delta'])
+        gradients.append(kwargs['grad'])
+        if kwargs["t"] % 100 == 0:
+            weights.append(kwargs['weights'])
 
-    return callback, values, deltas
+    return callback, values, weights, gradients
 
 
 if __name__ == '__main__':
@@ -96,14 +101,65 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------------------#
     # Initialize, fit and test network
 
-    callback, values, deltas = get_gd_state_recorder_callback()
+    callback, values, deltas, grads = get_gd_state_recorder_callback()
 
+    width = 64
 
-    nn = NeuralNetwork(
+    # nn = NeuralNetwork(
+    #     modules=[
+    #         FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
+    #         FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
+    #         FullyConnectedLayer(input_dim=width, output_dim=n_classes)
+    #     ],
+    #     loss_fn=CrossEntropyLoss(),
+    #     solver=StochasticGradientDescent(
+    #         learning_rate=FixedLR(base_lr=0.1),
+    #         max_iter=10000,
+    #         batch_size=256,
+    #         callback=callback)
+    # ).fit(train_X, train_y)
+    # pred_y = nn.predict(test_X)
+    # acc = accuracy(y_true=test_y, y_pred=pred_y)
+    # print(f"NN MNIST Acc On Test = {acc}")
+    #
+    # # Plotting convergence process
+    # conv_proc = go.Figure(data=[go.Scatter(x=np.arange(len(values)),
+    #                                        y=[np.mean(value) for value in values],
+    #                                        # y=[cross_entropy(y_true=train_y, y_pred=val) for val in values],
+    #                                        name="Loss")],
+    #                       layout=go.Layout(
+    #                           title="Convergence Rate for NN with<br>"
+    #                                 f"2 hidden layers of width {width}",
+    #                           xaxis=dict(title=r"$\text{Iteration}$"),
+    #                           yaxis=dict(title=r"$\text{Objective}$")))
+    # # add norm of weights
+    # conv_proc.add_trace(go.Scatter(x=np.arange(len(values)),
+    #                                y=[np.linalg.norm(grad) for grad in grads],
+    #                                name="Grad Norm"))
+    # conv_proc.show()
+    #
+    # # Plotting test true- vs predicted confusion matrix
+    # conf_mat = go.Figure(
+    #     data=[go.Heatmap(
+    #         z=confusion_matrix(test_y, pred_y),
+    #         x=np.arange(n_classes),
+    #         y=np.arange(n_classes)
+    #     )],
+    #     layout=go.Layout(
+    #         title=f"Confusion Matrix",
+    #         xaxis_title=f"True Value",
+    #         yaxis_title=f"Predicted Value"
+    #     )
+    # )
+    #
+    # conf_mat.show()
+
+    # ---------------------------------------------------------------------------------------------#
+    # Question 8: Network without hidden layers using SGD                                          #
+    # ---------------------------------------------------------------------------------------------#
+    nn_no_hidden = NeuralNetwork(
         modules=[
-            FullyConnectedLayer(input_dim=n_features, output_dim=64, activation=ReLU()),
-            FullyConnectedLayer(input_dim=64, output_dim=64, activation=ReLU()),
-            FullyConnectedLayer(input_dim=64, output_dim=n_classes)
+            FullyConnectedLayer(input_dim=n_features, output_dim=n_classes)
         ],
         loss_fn=CrossEntropyLoss(),
         solver=StochasticGradientDescent(
@@ -112,23 +168,20 @@ if __name__ == '__main__':
             batch_size=256,
             callback=callback)
     ).fit(train_X, train_y)
+    pred_y = nn_no_hidden.predict(test_X)
+    acc = accuracy(y_true=test_y, y_pred=pred_y)
+    print(f"NN MNIST No Hidden Acc On Test = {acc}")
 
-    # Plotting convergence process
-    raise NotImplementedError()
-
-    # Plotting test true- vs predicted confusion matrix
-    raise NotImplementedError()
-
-    # ---------------------------------------------------------------------------------------------#
-    # Question 8: Network without hidden layers using SGD                                          #
-    # ---------------------------------------------------------------------------------------------#
-    raise NotImplementedError()
 
     # ---------------------------------------------------------------------------------------------#
     # Question 9: Most/Least confident predictions                                                 #
     # ---------------------------------------------------------------------------------------------#
-    raise NotImplementedError()
 
+
+
+
+    print("------Done------")
+    exit()
     # ---------------------------------------------------------------------------------------------#
     # Question 10: GD vs GDS Running times                                                         #
     # ---------------------------------------------------------------------------------------------#
