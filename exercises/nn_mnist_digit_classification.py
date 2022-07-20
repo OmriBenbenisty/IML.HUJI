@@ -93,6 +93,7 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
 
 
 if __name__ == '__main__':
+    np.random.seed(0)
     train_X, train_y, test_X, test_y = load_mnist()
     (n_samples, n_features), n_classes = train_X.shape, 10
 
@@ -105,19 +106,20 @@ if __name__ == '__main__':
 
     width = 64
 
-    # nn = NeuralNetwork(
-    #     modules=[
-    #         FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=width, output_dim=n_classes)
-    #     ],
-    #     loss_fn=CrossEntropyLoss(),
-    #     solver=StochasticGradientDescent(
-    #         learning_rate=FixedLR(base_lr=0.1),
-    #         max_iter=10000,
-    #         batch_size=256,
-    #         callback=callback)
-    # ).fit(train_X, train_y)
+    nn = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
+            FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
+            FullyConnectedLayer(input_dim=width, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=StochasticGradientDescent(
+            learning_rate=FixedLR(base_lr=0.1),
+            max_iter=10000,
+            batch_size=256,
+            callback=callback)
+    ).fit(train_X, train_y)
+
     # pred_y = nn.predict(test_X)
     # acc = accuracy(y_true=test_y, y_pred=pred_y)
     # print(f"NN MNIST Acc On Test = {acc}")
@@ -157,27 +159,49 @@ if __name__ == '__main__':
     # ---------------------------------------------------------------------------------------------#
     # Question 8: Network without hidden layers using SGD                                          #
     # ---------------------------------------------------------------------------------------------#
-    nn_no_hidden = NeuralNetwork(
-        modules=[
-            FullyConnectedLayer(input_dim=n_features, output_dim=n_classes)
-        ],
-        loss_fn=CrossEntropyLoss(),
-        solver=StochasticGradientDescent(
-            learning_rate=FixedLR(base_lr=0.1),
-            max_iter=10000,
-            batch_size=256,
-            callback=callback)
-    ).fit(train_X, train_y)
-    pred_y = nn_no_hidden.predict(test_X)
-    acc = accuracy(y_true=test_y, y_pred=pred_y)
-    print(f"NN MNIST No Hidden Acc On Test = {acc}")
+    # nn_no_hidden = NeuralNetwork(
+    #     modules=[
+    #         FullyConnectedLayer(input_dim=n_features, output_dim=n_classes)
+    #     ],
+    #     loss_fn=CrossEntropyLoss(),
+    #     solver=StochasticGradientDescent(
+    #         learning_rate=FixedLR(base_lr=0.1),
+    #         max_iter=10000,
+    #         batch_size=256,
+    #         callback=callback)
+    # ).fit(train_X, train_y)
+    # pred_y = nn_no_hidden.predict(test_X)
+    # acc = accuracy(y_true=test_y, y_pred=pred_y)
+    # print(f"NN MNIST No Hidden Acc On Test = {acc}")
 
 
     # ---------------------------------------------------------------------------------------------#
     # Question 9: Most/Least confident predictions                                                 #
     # ---------------------------------------------------------------------------------------------#
+    prob = nn.compute_prediction(X=test_X)
+    confidence = np.max(prob, axis=1)
+    # print(confidence)
+    most_conf = np.argmax(confidence)
+    least_conf = np.argmin(confidence)
+    print(f"Most Confident = {most_conf}")
+    print(f"Least Confident = {least_conf}")
 
+    plot_images_grid(test_X[most_conf].reshape(1, 784),
+                     title="Most Confident").show()
+    plot_images_grid(test_X[least_conf].reshape(1, 784),
+                     title="Least Confident").show()
 
+    test_X_7 = test_X[test_y == 7]
+    test_y_7 = test_y[test_y == 7]
+
+    prob_7 = nn.compute_prediction(X=test_X_7)
+    confidence_7 = np.max(prob_7, axis=1)
+    confidence_7 = np.argsort(confidence_7)
+
+    plot_images_grid(test_X_7[confidence_7[-64:]].reshape(64, 784),
+                     title="Most Confident").show()
+    plot_images_grid(test_X_7[confidence_7[:64]].reshape(64, 784),
+                     title="Least Confident").show()
 
 
     print("------Done------")
