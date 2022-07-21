@@ -182,19 +182,6 @@ if __name__ == '__main__':
                                        name="Grad Norm"))
         conv_proc.show()
 
-        # conv_proc = go.Figure(
-        #     data=go.Scatter(
-        #         x=np.arange(len(values)),
-        #         y=values
-        #     ),
-        #     layout=go.Layout(
-        #         title="Convergence Rate for NN with<br>"
-        #               f"2 hidden layers of width {width}",
-        #         xaxis_title=r"Iteration",
-        #         yaxis_title=r"Loss"
-        #     )
-        # )
-        # conv_proc.show()
 
         fig = animate_decision_boundary(nn=nn,
                                         weights=weights,

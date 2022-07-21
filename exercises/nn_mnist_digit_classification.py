@@ -127,7 +127,6 @@ if __name__ == '__main__':
 
     callback, values, deltas, grads = get_gd_state_recorder_callback()
 
-
     nn = NeuralNetwork(
         modules=[
             FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
@@ -144,7 +143,7 @@ if __name__ == '__main__':
 
     pred_y = nn.predict(test_X)
     acc = accuracy(y_true=test_y, y_pred=pred_y)
-    print(f"NN MNIST Acc On Test = {acc}")
+    print(f"NN MNIST With Hidden Layers Acc On Test = {acc}")
 
     # Plotting convergence process
     conv_proc = go.Figure(data=[go.Scatter(x=np.arange(len(values)),
@@ -163,156 +162,168 @@ if __name__ == '__main__':
     conv_proc.show()
 
     # Plotting test true- vs predicted confusion matrix
-    conf_mat = go.Figure(
+    conf_mat = confusion_matrix(test_y, pred_y)
+    conf_mat_sorted = np.argsort(np.diag(conf_mat))
+    least_conf = conf_mat_sorted[:3]
+    most_conf = conf_mat_sorted[-2:][::-1]
+    print(f"Most Confident 2 = {most_conf}")
+    print(f"Least Confident 3 = {least_conf}")
+    conf_mat_g = go.Figure(
         data=[go.Heatmap(
-            z=confusion_matrix(test_y, pred_y),
+            z=conf_mat,
             x=np.arange(n_classes),
             y=np.arange(n_classes)
         )],
         layout=go.Layout(
             title=f"Confusion Matrix",
-            xaxis = dict(title=f"True Value",dtick=1),
-            yaxis = dict(title=f"Predicted Value",dtick=1)
+            xaxis=dict(title=f"True Value", dtick=1),
+            yaxis=dict(title=f"Predicted Value", dtick=1)
         )
     )
 
-    conf_mat.show()
+    conf_mat_g.show()
+
+    raise Exception
 
     # ---------------------------------------------------------------------------------------------#
     # Question 8: Network without hidden layers using SGD                                          #
     # ---------------------------------------------------------------------------------------------#
-    # nn_no_hidden = NeuralNetwork(
-    #     modules=[
-    #         FullyConnectedLayer(input_dim=n_features, output_dim=n_classes)
-    #     ],
-    #     loss_fn=CrossEntropyLoss(),
-    #     solver=StochasticGradientDescent(
-    #         learning_rate=FixedLR(base_lr=0.1),
-    #         max_iter=10000,
-    #         batch_size=256,
-    #         callback=callback)
-    # ).fit(train_X, train_y)
-    # pred_y = nn_no_hidden.predict(test_X)
-    # acc = accuracy(y_true=test_y, y_pred=pred_y)
-    # print(f"NN MNIST No Hidden Acc On Test = {acc}")
+
+    callback, values, deltas, grads = get_gd_state_recorder_callback()
+
+    nn_no_hidden = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=StochasticGradientDescent(
+            learning_rate=FixedLR(base_lr=0.1),
+            max_iter=10000,
+            batch_size=256,
+            callback=callback)
+    ).fit(train_X, train_y)
+    pred_y = nn_no_hidden.predict(test_X)
+    acc = accuracy(y_true=test_y, y_pred=pred_y)
+    print(f"NN MNIST No Hidden Acc On Test = {acc}")
+
 
     # ---------------------------------------------------------------------------------------------#
     # Question 9: Most/Least confident predictions                                                 #
     # ---------------------------------------------------------------------------------------------#
-    # prob = nn.compute_prediction(X=test_X)
-    # confidence = np.max(prob, axis=1)
-    # # print(confidence)
-    # most_conf = np.argmax(confidence)
-    # least_conf = np.argmin(confidence)
-    # print(f"Most Confident = {most_conf}")
-    # print(f"Least Confident = {least_conf}")
-    #
-    # plot_images_grid(test_X[most_conf].reshape(1, 784),
-    #                  title="Most Confident").show()
-    # plot_images_grid(test_X[least_conf].reshape(1, 784),
-    #                  title="Least Confident").show()
-    #
-    # test_X_7 = test_X[test_y == 7]
-    # test_y_7 = test_y[test_y == 7]
-    #
-    # prob_7 = nn.compute_prediction(X=test_X_7)
-    # confidence_7 = np.max(prob_7, axis=1)
-    # confidence_7 = np.argsort(confidence_7)
-    #
-    # plot_images_grid(test_X_7[confidence_7[-64:]].reshape(64, 784),
-    #                  title="Most Confident").show()
-    # plot_images_grid(test_X_7[confidence_7[:64]].reshape(64, 784),
-    #                  title="Least Confident").show()
+    prob = nn.compute_prediction(X=test_X)
+    confidence = np.max(prob, axis=1)
+    # print(confidence)
+    most_conf = np.argmax(confidence)
+    least_conf = np.argmin(confidence)
+    print(f"Most Confident = {most_conf}")
+    print(f"Least Confident = {least_conf}")
+
+    plot_images_grid(test_X[most_conf].reshape(1, 784),
+                     title="Most Confident").show()
+    plot_images_grid(test_X[least_conf].reshape(1, 784),
+                     title="Least Confident").show()
+
+    test_X_7 = test_X[test_y == 7]
+    test_y_7 = test_y[test_y == 7]
+
+    prob_7 = nn.compute_prediction(X=test_X_7)
+    confidence_7 = np.max(prob_7, axis=1)
+    confidence_7 = np.argsort(confidence_7)
+
+    plot_images_grid(test_X_7[confidence_7[-64:]].reshape(64, 784),
+                     title="Most Confident").show()
+    plot_images_grid(test_X_7[confidence_7[:64]].reshape(64, 784),
+                     title="Least Confident").show()
 
     # ---------------------------------------------------------------------------------------------#
     # Question 10: GD vs SGD Running times                                                         #
     # ---------------------------------------------------------------------------------------------#
 
-    # train_size = 2500
-    # train_X = train_X[:train_size].copy()
-    # train_y = train_y[:train_size].copy()
-    # scatters = []
-    #
-    # sgd_callback, sgd_values, sgd_time = get_sgd_time_recorder_callback()
-    # sgd_nn = NeuralNetwork(
-    #     modules=[
-    #         FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=width, output_dim=n_classes)
-    #     ],
-    #     loss_fn=CrossEntropyLoss(),
-    #     solver=StochasticGradientDescent(
-    #         learning_rate=FixedLR(base_lr=0.1),
-    #         max_iter=10000,
-    #         batch_size=64,
-    #         tol=1e-10,
-    #         callback=sgd_callback
-    #     )
-    # ).fit(train_X.copy(), train_y.copy())
-    # print("Done Fitting")
-    # sgd_time = np.array(sgd_time) - sgd_time[0]
-    # sgd_scatter = go.Scatter(
-    #     x=sgd_time.copy(),
-    #     y=[np.mean(value) for value in sgd_values]
-    # )
-    # scatters.append(sgd_scatter)
-    # go.Figure(
-    #     data=[
-    #         sgd_scatter
-    #     ],
-    #     layout=go.Layout(
-    #         title=f"NN with SGD Loss as Function of Runtime",
-    #         xaxis_title="Runtime",
-    #         yaxis_title="Loss"
-    #     )
-    # ).show()
-    #
-    # np.random.seed(0)
-    #
-    # gd_callback, gd_values, gd_time = get_gd_time_recorder_callback()
-    # gd_nn = NeuralNetwork(
-    #     modules=[
-    #         FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
-    #         FullyConnectedLayer(input_dim=width, output_dim=n_classes)
-    #     ],
-    #     loss_fn=CrossEntropyLoss(),
-    #     solver=GradientDescent(
-    #         learning_rate=FixedLR(base_lr=0.1),
-    #         max_iter=10000,
-    #         tol=1e-10,
-    #         callback=gd_callback
-    #     )
-    # ).fit(train_X.copy(), train_y.copy())
-    # print("Done Fitting")
-    # gd_time = np.array(gd_time) - gd_time[0]
-    # gd_scatter = go.Scatter(
-    #     x=gd_time.copy(),
-    #     y=[np.mean(value) for value in gd_values]
-    # )
-    # scatters.append(gd_scatter)
-    # go.Figure(
-    #     data=[
-    #         gd_scatter
-    #     ],
-    #     layout=go.Layout(
-    #         title=f"NN with GD Loss as Function of Runtime",
-    #         xaxis_title="Runtime",
-    #         yaxis_title="Loss"
-    #     )
-    # ).show()
-    #
-    # # for i, solver in enumerate(solvers):
-    # #     solver.callback_ = gd_callback
-    # #     print("Fitting....")
-    #
-    # go.Figure(
-    #     data=scatters,
-    #     layout=go.Layout(
-    #         title="NN Loss as Function of Runtime",
-    #         xaxis_title="Runtime",
-    #         yaxis_title="Loss"
-    #     )
-    # ).show()
+    train_size = 2500
+    train_X = train_X[:train_size].copy()
+    train_y = train_y[:train_size].copy()
+    scatters = []
+
+    sgd_callback, sgd_values, sgd_time = get_sgd_time_recorder_callback()
+    sgd_nn = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
+            FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
+            FullyConnectedLayer(input_dim=width, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=StochasticGradientDescent(
+            learning_rate=FixedLR(base_lr=0.1),
+            max_iter=10000,
+            batch_size=64,
+            tol=1e-10,
+            callback=sgd_callback
+        )
+    ).fit(train_X.copy(), train_y.copy())
+    print("Done Fitting")
+    sgd_time = np.array(sgd_time) - sgd_time[0]
+    sgd_scatter = go.Scatter(
+        x=sgd_time.copy(),
+        y=[np.mean(value) for value in sgd_values]
+    )
+    scatters.append(sgd_scatter)
+    go.Figure(
+        data=[
+            sgd_scatter
+        ],
+        layout=go.Layout(
+            title=f"NN with SGD Loss as Function of Runtime",
+            xaxis_title="Runtime",
+            yaxis_title="Loss"
+        )
+    ).show()
+
+    np.random.seed(0)
+
+    gd_callback, gd_values, gd_time = get_gd_time_recorder_callback()
+    gd_nn = NeuralNetwork(
+        modules=[
+            FullyConnectedLayer(input_dim=n_features, output_dim=width, activation=ReLU()),
+            FullyConnectedLayer(input_dim=width, output_dim=width, activation=ReLU()),
+            FullyConnectedLayer(input_dim=width, output_dim=n_classes)
+        ],
+        loss_fn=CrossEntropyLoss(),
+        solver=GradientDescent(
+            learning_rate=FixedLR(base_lr=0.1),
+            max_iter=10000,
+            tol=1e-10,
+            callback=gd_callback
+        )
+    ).fit(train_X.copy(), train_y.copy())
+    print("Done Fitting")
+    gd_time = np.array(gd_time) - gd_time[0]
+    gd_scatter = go.Scatter(
+        x=gd_time.copy(),
+        y=[np.mean(value) for value in gd_values]
+    )
+    scatters.append(gd_scatter)
+    go.Figure(
+        data=[
+            gd_scatter
+        ],
+        layout=go.Layout(
+            title=f"NN with GD Loss as Function of Runtime",
+            xaxis_title="Runtime",
+            yaxis_title="Loss"
+        )
+    ).show()
+
+    # for i, solver in enumerate(solvers):
+    #     solver.callback_ = gd_callback
+    #     print("Fitting....")
+
+    go.Figure(
+        data=scatters,
+        layout=go.Layout(
+            title="NN Loss as Function of Runtime",
+            xaxis_title="Runtime",
+            yaxis_title="Loss"
+        )
+    ).show()
 
     print("------Done------")
